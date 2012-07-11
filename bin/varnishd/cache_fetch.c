@@ -366,7 +366,8 @@ fet_recv(struct fetch *fp)
 	 * XXX at here we can add some options such as keeping the fetcher to
 	 * download the content if the download rate is over some threshold.
 	 */
-	if ((sp->flags & SESS_F_QUICKABORT) != 0) {
+	if (params->quickabort == 1 &&
+	    (sp->flags & SESS_F_QUICKABORT) != 0) {
 		WSP(sp, SLT_FetchError, "client aborted its connection.");
 		fp->step = FET_ERROR;
 		return (FETCH_CONTINUE);

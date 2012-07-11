@@ -216,6 +216,9 @@ struct params {
 
 	/* my gift for ucloud service */
 	unsigned		wtf_ucloud;
+
+	/* QuickAbort feature */
+	unsigned		quickabort;
 };
 
 /*

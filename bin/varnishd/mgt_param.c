@@ -920,6 +920,11 @@ static const struct parspec input_parspec[] = {
 		"its own public IP.",
 		0,
 		"off", "bool" },
+	{ "quickabort", tweak_bool, &master.quickabort, 0, 0,
+		"Abort the fetcher if the client is disconnected that "
+		"the downloading content would be dropped.",
+		0,
+		"on", "bool" },
 	{ NULL, NULL, NULL }
 };
 
