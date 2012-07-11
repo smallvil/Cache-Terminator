@@ -611,6 +611,7 @@ struct sess {
 #define	SESS_F_INADDR_ANY	0x00000800
 #define	SESS_F_BACKEND_HINT	0x00001000
 #define	SESS_F_NOFLUSHREQ	0x00002000
+#define	SESS_F_QUICKABORT	0x00004000
 	struct septum		septum;
 
 	int			restarts;

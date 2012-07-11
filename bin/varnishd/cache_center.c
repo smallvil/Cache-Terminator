@@ -3176,6 +3176,11 @@ cnt_http_deliver_body_send(struct sess *sp)
 	}
 	if (i == -1) {
 		vca_close_session(sp, "remote closed");
+		/*
+		 * The fetcher is still working at this momement so sets a flag
+		 * letting him know what's happenning on the client side.
+		 */
+		sp->flags |= SESS_F_QUICKABORT;
 		sp->step = STP_HTTP_DELIVER_BODY_END;
 		return (SESS_CONTINUE);
 	}

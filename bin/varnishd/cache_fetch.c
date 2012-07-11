@@ -360,6 +360,17 @@ fet_recv(struct fetch *fp)
 			WRONG("Unknown body status for error handling");
 		}
 	}
+	/*
+	 * Aborts the fetcher if the client is disconnected.
+	 *
+	 * XXX at here we can add some options such as keeping the fetcher to
+	 * download the content if the download rate is over some threshold.
+	 */
+	if ((sp->flags & SESS_F_QUICKABORT) != 0) {
+		WSP(sp, SLT_FetchError, "client aborted its connection.");
+		fp->step = FET_ERROR;
+		return (FETCH_CONTINUE);
+	}
 	SEPTUM_SPTR(&fp->septum, SEPTUM_GPTR(&fp->septum) + i);
 	SEPTUM_SSL(&fp->septum, SEPTUM_GSL(&fp->septum) - i);
 	if (sp->wrkvar.body_status == BS_LENGTH ||
