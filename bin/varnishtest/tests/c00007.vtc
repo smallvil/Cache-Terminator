@@ -1,0 +1,5 @@
+# $Id: c00007.vtc 2 2011-03-27 07:34:59Z jwg286 $
+
+test "Test banning a hash"
+
+varnish v1 -arg "-b 127.0.0.1:80 -a 127.0.0.1:0" -start -clierr 101 "purge.hash foo"

@@ -1,0 +1,515 @@
+/*-
+ * Copyright (c) 2006 Verdens Gang AS
+ * Copyright (c) 2006-2010 Redpill Linpro AS
+ * All rights reserved.
+ *
+ * Author: Poul-Henning Kamp <phk@phk.freebsd.dk>
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL AUTHOR OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ *
+ */
+
+#include "config.h"
+
+#include "svnid.h"
+SVNID("$Id: cache_acceptor.c 92 2011-04-11 18:51:33Z jwg286 $")
+
+#include <stdio.h>
+#include <errno.h>
+#include <poll.h>
+#include <string.h>
+#include <stdlib.h>
+#include <unistd.h>
+
+#include <sys/uio.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+
+#include "cli.h"
+#include "cli_priv.h"
+#include "shmlog.h"
+#include "cache.h"
+#include "cache_waiter.h"
+
+static struct waiter * const vca_waiters[] = {
+#if defined(HAVE_KQUEUE)
+	&waiter_kqueue,
+#endif
+#if defined(HAVE_EPOLL_CTL)
+	&waiter_epoll,
+#endif
+#if defined(HAVE_PORT_CREATE)
+	&waiter_ports,
+#endif
+	NULL,
+};
+
+static struct waiter const *vca_act;
+
+pthread_t		*VCA_thread;
+static struct pollfd	*VCA_pfd;
+static struct timeval	tv_sndtimeo;
+static struct timeval	tv_rcvtimeo;
+
+/*--------------------------------------------------------------------
+ * Report waiter name to panics
+ */
+
+const char *
+VCA_waiter_name(void)
+{
+
+	if (vca_act != NULL)
+		return (vca_act->name);
+	else
+		return ("no_waiter");
+}
+
+
+/*--------------------------------------------------------------------
+ * We want to get out of any kind of touble-hit TCP connections as fast
+ * as absolutely possible, so we set them LINGER enabled with zero timeout,
+ * so that even if there are outstanding write data on the socket, a close(2)
+ * will return immediately.
+ */
+static const struct linger linger = {
+	.l_onoff	=	0,
+};
+
+static unsigned char	need_sndtimeo, need_rcvtimeo, need_linger, need_test;
+
+int vca_pipes[2] = { -1, -1 };
+
+static void
+sock_test(int fd)
+{
+	struct linger lin;
+	struct timeval tv;
+	socklen_t l;
+	int i;
+
+	l = sizeof lin;
+	i = getsockopt(fd, SOL_SOCKET, SO_LINGER, &lin, &l);
+	if (i) {
+		TCP_Assert(i);
+		return;
+	}
+	assert(l == sizeof lin);
+	if (memcmp(&lin, &linger, l))
+		need_linger = 1;
+
+#ifdef SO_SNDTIMEO_WORKS
+	l = sizeof tv;
+	i = getsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, &l);
+	if (i) {
+		TCP_Assert(i);
+		return;
+	}
+	assert(l == sizeof tv);
+	if (memcmp(&tv, &tv_sndtimeo, l))
+		need_sndtimeo = 1;
+#else
+	(void)tv;
+	(void)tv_sndtimeo;
+	(void)need_sndtimeo;
+#endif
+
+#ifdef SO_RCVTIMEO_WORKS
+	l = sizeof tv;
+	i = getsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, &l);
+	if (i) {
+		TCP_Assert(i);
+		return;
+	}
+	assert(l == sizeof tv);
+	if (memcmp(&tv, &tv_rcvtimeo, l))
+		need_rcvtimeo = 1;
+#else
+	(void)tv;
+	(void)tv_rcvtimeo;
+	(void)need_rcvtimeo;
+#endif
+
+	need_test = 0;
+}
+
+/*--------------------------------------------------------------------
+ * Called once the workerthread gets hold of the session, to do setup
+ * setup overhead, we don't want to bother the acceptor thread with.
+ */
+
+void
+VCA_Prep(struct sess *sp)
+{
+	char addr[TCP_ADDRBUFSIZE];
+	char port[TCP_PORTBUFSIZE];
+
+	TCP_name(sp->sockaddr, sp->sockaddrlen,
+	    addr, sizeof addr, port, sizeof port);
+	sp->addr = WS_Dup(sp->ws, addr);
+	sp->port = WS_Dup(sp->ws, port);
+	if (params->log_local_addr) {
+		AZ(getsockname(sp->sp_fd, sp->mysockaddr,
+		    &sp->mysockaddrlen));
+		TCP_name(sp->mysockaddr, sp->mysockaddrlen,
+		    addr, sizeof addr, port, sizeof port);
+		VSL(SLT_SessionOpen, sp->sp_fd, "%s %s %s %s",
+		    sp->addr, sp->port, addr, port);
+	} else {
+		VSL(SLT_SessionOpen, sp->sp_fd, "%s %s %s",
+		    sp->addr, sp->port, sp->mylsock->name);
+	}
+	sp->acct_ses.first = sp->t_open;
+	if (need_test)
+		sock_test(sp->sp_fd);
+	if (need_linger)
+		TCP_Assert(setsockopt(sp->sp_fd, SOL_SOCKET, SO_LINGER,
+		    &linger, sizeof linger));
+#ifdef SO_SNDTIMEO_WORKS
+	if (need_sndtimeo)
+		TCP_Assert(setsockopt(sp->sp_fd, SOL_SOCKET, SO_SNDTIMEO,
+		    &tv_sndtimeo, sizeof tv_sndtimeo));
+#endif
+#ifdef SO_RCVTIMEO_WORKS
+	if (need_rcvtimeo)
+		TCP_Assert(setsockopt(sp->sp_fd, SOL_SOCKET, SO_RCVTIMEO,
+		    &tv_rcvtimeo, sizeof tv_rcvtimeo));
+#endif
+}
+
+/*--------------------------------------------------------------------*/
+
+static void
+vca_acct_prepare(void)
+{
+	struct listen_sock *ls;
+	int i;
+
+	/* Set up the poll argument */
+	VCA_pfd = calloc(sizeof *VCA_pfd, heritage.nsocks);
+	AN(VCA_pfd);
+	i = 0;
+	VTAILQ_FOREACH(ls, &heritage.socks, list) {
+		if (ls->sock < 0)
+			continue;
+		AZ(listen(ls->sock, params->listen_depth));
+		AZ(setsockopt(ls->sock, SOL_SOCKET, SO_LINGER,
+		    &linger, sizeof linger));
+		VCA_pfd[i].events = POLLIN;
+		VCA_pfd[i++].fd = ls->sock;
+	}
+}
+
+/*--------------------------------------------------------------------*/
+
+static void *
+vca_acct(void *arg)
+{
+	struct sess *sp;
+	socklen_t l;
+	struct sockaddr_storage addr_s;
+	struct sockaddr *addr;
+	int i;
+	struct listen_sock *ls;
+	unsigned u;
+	double t0, now, pace;
+
+	THR_SetName("cache-acceptor");
+	(void)arg;
+
+	need_test = 1;
+	pace = 0;
+	t0 = TIM_real();
+	while (1) {
+#ifdef SO_SNDTIMEO_WORKS
+		if (params->send_timeout != tv_sndtimeo.tv_sec) {
+			need_test = 1;
+			tv_sndtimeo.tv_sec = params->send_timeout;
+			VTAILQ_FOREACH(ls, &heritage.socks, list) {
+				if (ls->sock < 0)
+					continue;
+				AZ(setsockopt(ls->sock, SOL_SOCKET,
+				    SO_SNDTIMEO,
+				    &tv_sndtimeo, sizeof tv_sndtimeo));
+			}
+		}
+#endif
+#ifdef SO_RCVTIMEO_WORKS
+		if (params->sess_timeout != tv_rcvtimeo.tv_sec) {
+			need_test = 1;
+			tv_rcvtimeo.tv_sec = params->sess_timeout;
+			VTAILQ_FOREACH(ls, &heritage.socks, list) {
+				if (ls->sock < 0)
+					continue;
+				AZ(setsockopt(ls->sock, SOL_SOCKET,
+				    SO_RCVTIMEO,
+				    &tv_rcvtimeo, sizeof tv_rcvtimeo));
+			}
+		}
+#endif
+		/* Bound the pacing delay by parameter */
+		if (pace > params->acceptor_sleep_max)
+			pace = params->acceptor_sleep_max;
+		if (pace < params->acceptor_sleep_incr)
+			pace = 0.0;
+		if (pace > 0.0)
+			TIM_sleep(pace);
+		i = poll(VCA_pfd, heritage.nsocks, 1000);
+		now = TIM_real();
+		VSL_stats->uptime = (uint64_t)(now - t0);
+		u = 0;
+		VTAILQ_FOREACH(ls, &heritage.socks, list) {
+			if (ls->sock < 0)
+				continue;
+			if (VCA_pfd[u++].revents == 0)
+				continue;
+			VSL_stats->client_conn++;
+			l = sizeof addr_s;
+			addr = (void*)&addr_s;
+			i = accept(ls->sock, addr, &l);
+			if (i < 0) {
+				/*
+				 * If multiple acceptors are used, it's common
+				 * to get a EAGAIN.
+				 */
+				if (errno == EAGAIN)
+					continue;
+				VSL_stats->accept_fail++;
+				switch (errno) {
+				case ECONNABORTED:
+					break;
+				case EMFILE:
+					VSL(SLT_Debug, ls->sock,
+					    "Too many open files "
+					    "when accept(2)ing. Sleeping.");
+					pace += params->acceptor_sleep_incr;
+					break;
+				default:
+					VSL(SLT_Debug, ls->sock,
+					    "Accept failed: %s",
+					    strerror(errno));
+					pace += params->acceptor_sleep_incr;
+					break;
+				}
+				continue;
+			}
+			sp = SES_New();
+			if (sp == NULL) {
+				AZ(close(i));
+				VSL_stats->client_drop++;
+				pace += params->acceptor_sleep_incr;
+				continue;
+			}
+			sp->sp_fd = i;
+			sp->id = i;
+			sp->t_open = now;
+			sp->t_end = now;
+			sp->mylsock = ls;
+			assert(l < sp->sockaddrlen);
+			memcpy(sp->sockaddr, addr, l);
+			sp->sockaddrlen = l;
+			callout_init(&sp->septum.co, sp->id);
+
+			sp->step = STP_FIRST;
+			if (WRK_QueueSession(sp)) {
+				VSL_stats->client_drop++;
+				pace += params->acceptor_sleep_incr;
+			} else {
+				pace *= params->acceptor_sleep_decay;
+			}
+		}
+	}
+	NEEDLESS_RETURN(NULL);
+}
+
+/*--------------------------------------------------------------------*/
+
+void
+vca_handover(struct sess *sp, int status)
+{
+
+	switch (status) {
+	case -2:
+		vca_close_session(sp, "blast");
+		SES_Delete(sp);
+		break;
+	case -1:
+		vca_close_session(sp, "no request");
+		SES_Delete(sp);
+		break;
+	case 1:
+		sp->step = STP_HTTP_START;
+		if (WRK_QueueSession(sp))
+			VSL_stats->client_drop_late++;
+		break;
+	default:
+		INCOMPL();
+	}
+}
+
+/*--------------------------------------------------------------------*/
+
+void
+vca_close_session(struct sess *sp, const char *why)
+{
+	int i;
+
+	if (sp->wrk != NULL)
+		WSL(sp->wrk, SLT_SessionClose, sp->id, "%s", why);
+	else
+		VSL(SLT_SessionClose, sp->id, "%s", why);
+	if (sp->sp_ssl != NULL)
+		XXL_free(&sp->sp_ssl);
+	if (sp->sp_fd >= 0) {
+		i = close(sp->sp_fd);
+		assert(i == 0 || errno != EBADF);	/* XXX EINVAL seen */
+	}
+	sp->sp_fd = -1;
+}
+
+void
+vca_return_session(struct sess *sp)
+{
+
+	CHECK_OBJ_NOTNULL(sp, SESS_MAGIC);
+	AZ(sp->obj);
+	AZ(sp->vcl);
+	assert(sp->sp_fd >= 0);
+	if (vca_act->pass == NULL)
+		assert(sizeof sp == write(vca_pipes[1], &sp, sizeof sp));
+	else
+		vca_act->pass(sp);
+}
+
+/*--------------------------------------------------------------------*/
+
+static void
+ccf_start(struct cli *cli, const char * const *av, void *priv)
+{
+	int i;
+
+	(void)cli;
+	(void)av;
+	(void)priv;
+
+	if (vca_act == NULL)
+		vca_act = vca_waiters[0];
+
+	AN(vca_act);
+	AN(vca_act->name);
+
+	if (vca_act->pass == NULL)
+		AZ(pipe(vca_pipes));
+	vca_act->init();
+	vca_acct_prepare();
+	VCA_thread = calloc(sizeof(pthread_t), params->athread_cnt);
+	AN(VCA_thread);
+	for (i = 0; i < params->athread_cnt; i++)
+		AZ(pthread_create(&VCA_thread[i], NULL, vca_acct, NULL));
+	VSL(SLT_Debug, 0, "Acceptor is %s", vca_act->name);
+}
+
+/*--------------------------------------------------------------------*/
+
+static void
+ccf_listen_address(struct cli *cli, const char * const *av, void *priv)
+{
+	struct listen_sock *ls;
+	char h[32], p[32];
+
+	(void)cli;
+	(void)av;
+	(void)priv;
+	VTAILQ_FOREACH(ls, &heritage.socks, list) {
+		if (ls->sock < 0)
+			continue;
+		TCP_myname(ls->sock, h, sizeof h, p, sizeof p);
+		cli_out(cli, "%s %s\n", h, p);
+	}
+}
+
+/*--------------------------------------------------------------------*/
+
+static struct cli_proto vca_cmds[] = {
+	{ CLI_SERVER_START,	"i", ccf_start },
+	{ "debug.listen_address",
+	    "debug.listen_address",
+	    "Report the actual listen address\n", 0, 0,
+	    "d", ccf_listen_address, NULL },
+	{ NULL }
+};
+
+void
+VCA_Init(void)
+{
+
+	CLI_AddFuncs(vca_cmds);
+}
+
+void
+VCA_Shutdown(void)
+{
+	struct listen_sock *ls;
+	int i;
+
+	VTAILQ_FOREACH(ls, &heritage.socks, list) {
+		if (ls->sock < 0)
+			continue;
+		i = ls->sock;
+		ls->sock = -1;
+		(void)close(i);
+	}
+}
+
+void
+VCA_tweak_waiter(struct cli *cli, const char *arg)
+{
+	int i;
+
+	 ASSERT_MGT();
+
+	if (arg == NULL) {
+		if (vca_act == NULL)
+			cli_out(cli, "default");
+		else
+			cli_out(cli, "%s", vca_act->name);
+
+		cli_out(cli, " (");
+		for (i = 0; vca_waiters[i] != NULL; i++)
+			cli_out(cli, "%s%s", i == 0 ? "" : ", ",
+			    vca_waiters[i]->name);
+		cli_out(cli, ")");
+		return;
+	}
+	if (!strcmp(arg, "default")) {
+		vca_act = NULL;
+		return;
+	}
+	for (i = 0; vca_waiters[i]; i++) {
+		if (!strcmp(arg, vca_waiters[i]->name)) {
+			vca_act = vca_waiters[i];
+			return;
+		}
+	}
+	cli_out(cli, "Unknown waiter");
+	cli_result(cli, CLIS_PARAM);
+}

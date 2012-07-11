@@ -1,0 +1,30 @@
+# $Id: r00502.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "multi element purge"
+
+server s1 {
+	rxreq
+	txresp -hdr "foo: bar1" -body "1"
+	rxreq
+	txresp -hdr "foo: bar2" -body "22"
+} -start
+
+varnish v1 -vcl+backend {
+	sub vcl_http_recv {
+		purge("req.url == / && obj.http.foo ~ bar1");
+	}
+} -start
+
+client c1 {
+	txreq
+	rxresp
+	expect resp.http.foo == "bar1"
+	txreq
+	rxresp
+	expect resp.http.foo == "bar2"
+	txreq
+	rxresp
+	expect resp.http.foo == "bar2"
+} -run
+
+varnish v1 -cliok purge.list

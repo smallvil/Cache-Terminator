@@ -1,0 +1,11 @@
+# $Id: r00409.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Regression test for ticket 409"
+
+varnish v1  -badvcl {
+	sub vcl_http_recv {
+		if ( req.url ~ ! "\.(png|jpg|gif|js|css)$" ) {
+			return (pass);
+		}
+	}
+}

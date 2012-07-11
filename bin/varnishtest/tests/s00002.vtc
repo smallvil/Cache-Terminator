@@ -1,0 +1,45 @@
+# $Id: s00002.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Check grace with sick backends"
+
+server s1 -repeat 4 {
+	rxreq
+	expect req.url == "/"
+	txresp -body "hi"
+} -start
+
+varnish v1 -vcl {
+	backend b { 
+		.host = "${s1_addr}"; 
+		.port = "${s1_port}"; 
+		.probe = { 
+			.url = "/"; 
+			.timeout = 30ms; 
+			.interval = 1s; 
+			.window = 2; 
+			.threshold = 1; 
+			.initial = 0;
+			} 
+		}
+	sub vcl_http_fetch { 
+		set beresp.ttl = 1s; 
+		set beresp.grace = 1m; 
+		set beresp.cacheable = true; 
+	}
+} -start
+
+delay 2
+
+client c1 {
+	txreq -url "/"
+	rxresp
+	expect resp.status == 200
+} -run
+
+delay 3
+
+client c2 {
+	txreq -url "/"
+	rxresp
+	expect resp.status == 200
+} -run

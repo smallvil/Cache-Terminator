@@ -1,0 +1,24 @@
+diff --git a/head/Cache-Terminator/bin/Makefile.am b/head/Cache-Terminator/bin/Makefile.am
+index 54ce73e..273ba0a 100644
+--- a/head/Cache-Terminator/bin/Makefile.am
++++ b/head/Cache-Terminator/bin/Makefile.am
+@@ -1,6 +1,6 @@
+ # $Id$
+ 
+-SUBDIRS = varnishadm varnishd varnishlog varnishmap \
++SUBDIRS = varnishadm varnishd varnishlog \
+ 	  varnishncsa varnishreplay varnishtest
+ 
+ if HAVE_CURSES
+diff --git a/head/Cache-Terminator/configure.ac b/head/Cache-Terminator/configure.ac
+index e290667..49d6d0a 100644
+--- a/head/Cache-Terminator/configure.ac
++++ b/head/Cache-Terminator/configure.ac
+@@ -438,7 +438,6 @@ AC_CONFIG_FILES([
+     bin/varnishd/Makefile
+     bin/varnishlog/Makefile
+     bin/varnishhist/Makefile
+-    bin/varnishmap/Makefile
+     bin/varnishncsa/Makefile
+     bin/varnishreplay/Makefile
+     bin/varnishstat/Makefile

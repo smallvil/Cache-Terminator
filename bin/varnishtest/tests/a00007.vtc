@@ -1,0 +1,25 @@
+# $Id: a00007.vtc 2 2011-03-27 07:34:59Z jwg286 $
+
+test "TCP reuse"
+
+server s1 {
+	rxreq
+	expect req.url == "/1"
+	txresp -body "123456789\n"
+	rxreq
+	expect req.url == "/2"
+	txresp -body "987654321\n"
+}
+
+server s1 -start 
+
+client c1 -connect ${s1_sock} {
+	txreq -url "/1" -req "POST" -body "abcdefghi\n"
+	rxresp
+	txreq -url "/2" -req "POST" -body "ihgfedcba\n"
+	rxresp
+}
+
+client c1 -run
+
+server s1 -wait

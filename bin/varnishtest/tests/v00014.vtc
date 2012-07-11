@@ -1,0 +1,59 @@
+# $Id: v00014.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Check req.backend.healthy"
+
+server s1 {
+	rxreq
+	expect req.url == "/"
+	txresp -body "slash"
+} -start
+
+varnish v1 -vcl {
+
+	backend default {
+		.host = "${s1_addr}";
+		.port = "${s1_port}";
+		.max_connections = 1;
+		.probe = {
+			.url = "/";
+			.timeout = 1s;
+			.interval = 1s;
+			.window = 3;
+			.threshold = 2;
+			.initial = 0;
+		}
+	}
+
+	sub vcl_http_recv {
+		if (req.backend.healthy) {
+			error 200 "Backend healthy";
+		} else {
+			error 500 "Backend sick";
+		}
+	}
+} -start
+
+client c1 {
+	txreq
+	rxresp
+	expect resp.status == 500
+} -run
+
+server s1 {
+	rxreq
+	expect req.url == "/"
+	txresp -body "slash"
+} -start
+
+server s1 {
+	rxreq
+	expect req.url == "/foo"
+	txresp -body "foobar"
+} -start
+
+client c1 {
+	txreq -url "/foo"
+	rxresp
+	expect resp.status == 200
+} -run
+

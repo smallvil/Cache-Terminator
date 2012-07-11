@@ -1,0 +1,46 @@
+# $Id: c00005.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Test simple ACL"
+
+server s1 {
+	rxreq
+	expect req.url == "/"
+	txresp -body "1111\n"
+	rxreq
+	expect req.url == "foo"
+	txresp -body "2222\n"
+} -start
+
+varnish v1 -arg "-p vcl_trace=on" -vcl+backend {
+	acl acl1 {
+		"localhost";
+	}
+
+	sub vcl_http_recv {
+		if (client.ip ~ acl1) {
+			set req.url = "/";
+		}
+	}
+} -start
+
+client c1 {
+	txreq -url "foo"
+	rxresp
+	expect resp.status == 200
+} -run
+
+varnish v1 -vcl+backend {
+	acl acl1 {
+		! "localhost";
+		"0.0.0.0" / 0;
+		"::" / 0;
+	}
+
+	sub vcl_http_recv {
+		if (client.ip ~ acl1) {
+			set req.url = "/";
+		}
+	}
+}
+
+client c1 -run

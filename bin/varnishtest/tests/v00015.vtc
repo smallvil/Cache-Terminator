@@ -1,0 +1,29 @@
+# $Id: v00015.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Check function calls with no action return"
+
+server s1 {
+	rxreq
+	expect req.url == "/"
+	expect req.http.foobar == "snafu"
+	txresp -body "slash"
+} -start 
+
+varnish v1 -vcl+backend {
+
+	sub vcl_http_recv {
+		call some_subr;
+	}
+
+	sub some_subr {
+		set req.http.foobar = "snafu";
+	}
+
+} -start
+
+client c1 {
+	txreq
+	rxresp
+	expect resp.status == 200
+} -run
+

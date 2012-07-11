@@ -1,0 +1,25 @@
+# $Id: r00561.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Junk request should not go to vcl_error"
+
+server s1 {
+	rxreq
+	txresp
+} -start
+
+varnish v1 -vcl+backend {
+	sub vcl_http_error {
+		return (restart);
+	}
+} -start
+
+client c1 {
+	send "sljdslf\r\n\r\n"
+	delay .1
+} -run
+
+client c1 {
+	txreq 
+	rxresp
+} -run
+

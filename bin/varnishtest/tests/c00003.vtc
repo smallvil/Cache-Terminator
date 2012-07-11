@@ -1,0 +1,21 @@
+# Test that we get anything through at all
+#
+# $Id: c00003.vtc 2 2011-03-27 07:34:59Z jwg286 $
+
+test "Check that we start if at least one listen address works"
+
+server s1 {
+	rxreq 
+	txresp -hdr "Connection: close" -body "012345\n"
+} -start
+
+varnish v1 -cliok "param.set listen_address ${bad_ip}:0"
+varnish v1 -vcl+backend {} -clierr 300 start
+varnish v1 -cliok "param.set listen_address 127.0.0.1:0,${bad_ip}:9082"
+varnish v1 -start
+
+client c1 {
+	txreq -url "/"
+	rxresp
+	expect resp.status == 200
+} -run

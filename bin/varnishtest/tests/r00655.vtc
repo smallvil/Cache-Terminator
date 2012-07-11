@@ -1,0 +1,11 @@
+# $Id: r00655.vtc 2 2011-03-27 07:34:59Z jwg286 $
+
+test "Test nested /*...*/ comments "
+
+
+varnish v1 -badvcl {
+
+	/* foo
+		/* bar
+	*/
+}

@@ -1,0 +1,36 @@
+# $Id: r00102.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Test VCL regsub()"
+
+server s1 {
+	rxreq 
+	txresp \
+		-hdr "Connection: close" \
+		-body "012345\n"
+} -start
+
+varnish v1 -arg "-p diag_bitmap=0x80000" -vcl+backend { 
+	sub vcl_http_recv {
+		if (req.request == "POST") {
+			set req.request = "GET";
+		}
+	}
+} -start -log
+
+client c1 {
+	txreq -req POST -url "/" \
+		-hdr "Content-Length: 10" \
+		-body "123456789\n"
+	rxresp
+	expect resp.status == 200
+	expect resp.http.X-Varnish == "1001"
+
+	txreq -req POST -url "/" \
+		-hdr "Content-Length: 10" \
+		-body "123456789\n"
+	rxresp
+	expect resp.status == 200
+	expect resp.http.X-Varnish == "1002 1001"
+}
+
+client c1 -run

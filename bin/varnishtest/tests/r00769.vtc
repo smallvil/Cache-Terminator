@@ -1,0 +1,45 @@
+# $Id: r00769.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Test that set status code is readable again for obj.status and beresp.status"
+
+server s1 {
+	rxreq
+	txresp
+} -start
+
+varnish v1 -vcl+backend {
+	sub vcl_http_recv {
+		if (req.url ~ "^/test1") {
+			error 700;
+		}
+	}
+	sub vcl_http_fetch {
+		set beresp.status = 404;
+		set beresp.http.X-status = beresp.status;
+		return (deliver);
+	}
+	sub vcl_http_error {
+		if (obj.status == 700) {
+			set obj.status=404;
+			set obj.http.X-status = obj.status;
+			return (deliver);
+		}
+	}
+} -start
+
+client c1 {
+	txreq -url "/test1"
+	rxresp
+	expect resp.status == 404
+	expect resp.http.X-status == 404
+}
+
+client c2 {
+	txreq -url "/test2"
+	rxresp
+	expect resp.status == 404
+	expect resp.http.X-status == 404
+}
+
+client c1 -run
+client c2 -run

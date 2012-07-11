@@ -1,0 +1,33 @@
+# $Id: v00000.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "VCL/VRT: req.grace, obj.ttl and obj.grace"
+
+
+server s1 {
+	rxreq 
+	txresp -hdr "Connection: close" -body "012345\n"
+}
+
+server s1 -start 
+
+varnish v1 -vcl+backend {
+	sub vcl_http_recv {
+		set req.grace += 1 s;
+	}
+	sub vcl_http_fetch {
+		set beresp.ttl += 1 m;
+		set beresp.grace += 1 h;
+	}
+} -start
+
+client c1 {
+	txreq -url "/"
+	rxresp
+	expect resp.status == 200
+}
+
+client c1 -run
+
+server s1 -wait
+
+varnish v1 -stop

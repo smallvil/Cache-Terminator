@@ -1,0 +1,47 @@
+## $Id: e00009.vtc 51 2011-04-06 02:10:52Z jwg286 $
+#
+#test "ESI binary detector"
+#
+#server s1 {
+#	rxreq 
+#	txresp -body {
+#		Before include
+#		<esi:remove>
+#			bar
+#		</esi:remove>
+#		<esi:include
+#	}
+#	rxreq 
+#	txresp -body {
+#		Before include
+#		<esi:remove>
+#			bar
+#		</esi:remove>
+#		<esi:include
+#	}
+#} -start
+#
+#varnish v1 -vcl+backend {
+#	sub vcl_http_fetch {
+#		esi;
+#	}
+#} -start
+#
+#client c1 {
+#	txreq 
+#	rxresp
+#	expect resp.status == 200
+#	expect resp.bodylen == 72
+#	expect resp.http.content-length == 72
+#} -run
+#
+#varnish v1  -cli "param.set esi_syntax 1" 
+#
+#client c1 {
+#	txreq -url bar
+#	rxresp
+#	expect resp.status == 200
+#	expect resp.bodylen == 37
+#	expect resp.http.transfer-encoding == "chunked"
+#} -run
+#varnish v1 -expect esi_errors == 1

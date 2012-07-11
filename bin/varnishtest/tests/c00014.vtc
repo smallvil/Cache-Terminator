@@ -1,0 +1,51 @@
+# $Id: c00014.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Test parking second request on backend delay, then pass"
+
+server s1 {
+	rxreq
+	expect req.url == "/foo"
+	sema r1 sync 2
+	send "HTTP/1.1 200 Ok\r\nContent-Length: 12\r\n\r\n"
+	send "line1\n"
+	send "line2\n"
+} -start
+
+server s2 {
+	rxreq
+	expect req.url == "/foo"
+	txresp -body "foobar"
+} -start
+
+varnish v1 -vcl+backend { 
+	sub vcl_http_recv {
+		if (req.http.H1 == "1000") {
+			set req.backend = s1;
+		} else {
+			set req.backend = s2;
+		}
+	}
+	sub vcl_http_fetch {
+		return(pass);
+	}
+} -start
+
+client c1 {
+	txreq -url "/foo" -hdr "H1: 1000" 
+	rxresp
+	expect resp.status == 200
+	expect resp.http.content-length == 12
+	expect resp.http.x-varnish == "1001"
+} -start
+sema r1 sync 2
+client c2 {
+	txreq -url "/foo"
+	rxresp
+	expect resp.status == 200
+	expect resp.http.content-length == 6
+	expect resp.http.x-varnish == "1002"
+} -run
+
+client c1 -wait
+
+varnish v1 -expect cache_hitpass == 1

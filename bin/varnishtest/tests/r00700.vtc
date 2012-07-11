@@ -1,0 +1,16 @@
+# $Id: r00700.vtc 2 2011-03-27 07:34:59Z jwg286 $
+
+test "check TAB in 3 header field"
+
+server s1 {
+	rxreq
+	send "HTTP/1.1 666 foo\tbar\n\nFOO"
+} -start
+
+varnish v1 -vcl+backend {} -start
+
+client c1 {
+	txreq
+	rxresp
+	expect resp.status == 666
+} -run

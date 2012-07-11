@@ -1,0 +1,27 @@
+# $Id: v00024.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Test that headers can be compared"
+
+server s1 {
+	rxreq
+	expect req.url == "/foo"
+	txresp -status 200 -body "1"
+} -start
+
+varnish v1 -vcl+backend { 
+	sub vcl_http_recv {
+		if (req.http.etag == req.http.if-none-match) {
+			error 400 "FOO";
+		}
+	}
+} -start
+
+client c1 {
+	txreq -url "/foo"
+	rxresp
+	expect resp.status == 200
+	expect resp.bodylen == 1
+	txreq -url "/foo" -hdr "etag: foo" -hdr "if-none-match: foo"
+	rxresp
+	expect resp.status == 400
+} -run

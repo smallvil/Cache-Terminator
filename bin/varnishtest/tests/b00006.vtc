@@ -1,0 +1,16 @@
+# $Id: b00006.vtc 2 2011-03-27 07:34:59Z jwg286 $
+
+test "Check that -s malloc works"
+
+server s1 {
+	rxreq 
+	txresp -hdr "Connection: close" -body "012345\n"
+} -start
+
+varnish v1 -arg "-s malloc" -vcl+backend {} -start
+
+client c1 {
+	txreq -url "/"
+	rxresp
+	expect resp.status == 200
+} -run

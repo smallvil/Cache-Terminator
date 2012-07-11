@@ -1,0 +1,31 @@
+# $Id: r00365.vtc 51 2011-04-06 02:10:52Z jwg286 $
+
+test "Test restarts in vcl_hit"
+
+server s1 {
+	rxreq
+	expect req.url == "/foo"
+	txresp -status 200 -body "1"
+	rxreq
+	expect req.url == "/foo"
+	txresp -status 200 -body "22"
+} -start
+
+varnish v1 -arg "-p diag_bitmap=0x80000" -vcl+backend { 
+	sub vcl_http_hit {
+		set obj.cacheable = false;
+		restart;
+	}
+} -start -log
+
+client c1 {
+	txreq -url "/foo"
+	rxresp
+	expect resp.status == 200
+	expect resp.bodylen == 1
+
+	txreq -url "/foo"
+	rxresp
+	expect resp.status == 200
+	expect resp.bodylen == 2
+} -run

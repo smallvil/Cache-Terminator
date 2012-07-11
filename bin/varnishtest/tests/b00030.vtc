@@ -1,0 +1,25 @@
+# $Id: b00030.vtc 51 2011-04-06 02:10:52Z jwg286 $
+# We can't test the value of x-timestamp, but this should fail
+# if we can't set the header at all.
+
+test "Test formatting of timestamps"
+
+server s1 {
+	rxreq
+	txresp
+} -start
+
+varnish v1 -vcl+backend {
+	sub vcl_http_recv {
+		error 200 req.grace;
+	}
+	sub vcl_http_error {
+		set obj.http.x-timestamp = now;
+	}
+} -start
+
+client c1 {
+	txreq
+	rxresp
+	expect resp.msg == "10.000"
+} -run

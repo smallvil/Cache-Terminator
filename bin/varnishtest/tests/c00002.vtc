@@ -1,0 +1,23 @@
+# Test that we get anything through at all
+#
+# $Id: c00002.vtc 2 2011-03-27 07:34:59Z jwg286 $
+
+test "Check that all thread pools all get started and get minimum threads"
+
+server s1 {
+	rxreq 
+	txresp -hdr "Connection: close" -body "012345\n"
+} -start
+
+varnish v1 -arg "-p thread_pool_min=2 -p thread_pool_max=2 -p thread_pools=4" 
+
+varnish v1 -vcl+backend {} -start
+
+varnish v1 -expect n_wrk_create == 8
+
+client c1 {
+	txreq -url "/"
+	rxresp
+	expect resp.status == 200
+} -run
+
