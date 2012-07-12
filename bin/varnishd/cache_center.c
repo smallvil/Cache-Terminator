@@ -2049,6 +2049,7 @@ cnt_http_fetch_resp_recv_nextbytes(struct sess *sp)
 	if (i < 0) {
 		WSP(sp, SLT_FetchError, "http read error: %d %d (%s)",
 		    i, errno, strerror(errno));
+		SESS_ERROR(sp, 503, "fetch nextbyte error");
 		VBE_CloseFd(sp, &sp->vc, 0);
 		sp->step = STP_HTTP_FETCH_ERROR;
 		return (SESS_CONTINUE);
