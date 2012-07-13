@@ -180,8 +180,10 @@ res_dorange(struct sess *sp, const char *r)
 	if (high >= sp->obj->len)
 		high = sp->obj->len - 1;
 
-	if (low > high)
+	if (low > high) {
+		VSL_stats->range_badfmt++;
 		return;
+	}
 
 	http_PrintfHeader(sp->wrk, sp->sp_fd, sp->wrkvar.resp,
 	    "Content-Range: bytes %zd-%zd/%zd", low, high, sp->obj->len);

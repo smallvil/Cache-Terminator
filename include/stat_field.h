@@ -185,4 +185,5 @@ MAC_STAT(n_geoip_discard,	uint64_t, 0, 'a', "N GeoIP discarded")
 
 MAC_STAT(range_single,		uint64_t, 0, 'a', "Single range byte")
 MAC_STAT(range_multi,		uint64_t, 0, 'a', "Multiple range bytes")
+MAC_STAT(range_badfmt,		uint64_t, 0, 'a', "Bad range format")
 
