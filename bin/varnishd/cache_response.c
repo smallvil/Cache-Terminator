@@ -170,8 +170,10 @@ res_dorange(struct sess *sp, const char *r)
 		}
 	} else
 		high = sp->obj->len - 1;
-	if (*r != '\0')
+	/* If *r != '\0' it means Range: header includes multiple ranges */
+	if (*r != '\0') {
 		return;
+	}
 
 	if (high >= sp->obj->len)
 		high = sp->obj->len - 1;
