@@ -3287,7 +3287,7 @@ cnt_http_deliver_end(struct sess *sp)
 	}
 	if (sp->vc != NULL)
 		VBE_CloseFd(sp, &sp->vc, (sp->flags & SESS_F_CLOSE) == 0);
-	if ((sp->obj->flags & OBJECT_F_EOF) != 0)
+	if (sp->sp_fd >= 0 && (sp->obj->flags & OBJECT_F_EOF) != 0)
 		vca_close_session(sp, "EOF");
 
 	/* fetch is involved if it turns on. */
