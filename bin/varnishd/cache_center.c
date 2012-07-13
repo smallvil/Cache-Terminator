@@ -292,7 +292,6 @@ cnt_first(struct sess *sp)
 	VCL_accept_method(sp);
 	switch (sp->handling) {
 	case VCL_RET_HTTP:
-		sp->flags |= SESS_T_HTTP;
 		ls = sp->mylsock;
 		/* if ls->ssl_ctx isn't NULL it means it's for SSL listen */
 		if (ls->ssl_ctx != NULL) {
@@ -1269,6 +1268,7 @@ cnt_http_wait_begin(struct sess *sp)
 	CHECK_OBJ_NOTNULL(sp, SESS_MAGIC);
 	AZ(sp->obj);
 	assert(sp->xid == 0);
+	sp->flags |= SESS_T_HTTP;
 
 	i = HTC_Complete(sp->htc);
 	if (i == 0 && params->session_linger > 0) {
