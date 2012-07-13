@@ -184,6 +184,11 @@ cnt_timeout(struct sess *sp)
 		SESS_ERROR(sp, 503, "fetch firstbyte timeout");
 		sp->step = STP_HTTP_FETCH_ERROR;
 		return (SESS_CONTINUE);
+	case STP_HTTP_DELIVER_BODY_SEND:
+		vca_close_session(sp, "send timeout");
+		sp->flags |= SESS_F_QUICKABORT;
+		sp->step = STP_HTTP_DELIVER_BODY_END;
+		return (SESS_CONTINUE);
 	case STP_SOCKS_RECV:
 		vca_close_session(sp, "SOCKS read timeout");
 		sp->step = STP_DONE;
