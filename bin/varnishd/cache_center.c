@@ -292,6 +292,7 @@ cnt_first(struct sess *sp)
 	VCL_accept_method(sp);
 	switch (sp->handling) {
 	case VCL_RET_HTTP:
+		sp->flags |= SESS_T_HTTP;
 		ls = sp->mylsock;
 		/* if ls->ssl_ctx isn't NULL it means it's for SSL listen */
 		if (ls->ssl_ctx != NULL) {
@@ -307,9 +308,11 @@ cnt_first(struct sess *sp)
 		sp->step = STP_HTTP_WAIT_BEGIN;
 		break;
 	case VCL_RET_PIPE:
+		sp->flags |= SESS_T_TUNNEL;
 		sp->step = STP_TUNNEL_START;
 		break;
 	case VCL_RET_SOCKS:
+		sp->flags |= SESS_T_SOCKS;
 		sp->step = STP_SOCKS_START;
 		break;
 	default:

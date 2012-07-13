@@ -612,6 +612,9 @@ struct sess {
 #define	SESS_F_BACKEND_HINT	0x00001000
 #define	SESS_F_NOFLUSHREQ	0x00002000
 #define	SESS_F_QUICKABORT	0x00004000
+#define	SESS_T_HTTP		0x00010000
+#define	SESS_T_SOCKS		0x00020000
+#define	SESS_T_TUNNEL		0x00040000
 	struct septum		septum;
 
 	int			restarts;
