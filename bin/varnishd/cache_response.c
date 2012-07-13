@@ -172,6 +172,7 @@ res_dorange(struct sess *sp, const char *r)
 		high = sp->obj->len - 1;
 	/* If *r != '\0' it means Range: header includes multiple ranges */
 	if (*r != '\0') {
+		VSL_stats->range_multi++;
 		return;
 	}
 

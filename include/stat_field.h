@@ -182,3 +182,6 @@ MAC_STAT(pipe_callout_backend,	uint64_t, 0, 'a', "backend callout PIPE write")
 MAC_STAT(n_geoip,		uint64_t, 0, 'a', "N GeoIP total")
 MAC_STAT(n_geoip_avail,		uint64_t, 0, 'a', "N GeoIP available")
 MAC_STAT(n_geoip_discard,	uint64_t, 0, 'a', "N GeoIP discarded")
+
+MAC_STAT(range_multi,		uint64_t, 0, 'a', "Multiple range bytes")
+
