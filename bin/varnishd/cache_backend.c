@@ -168,7 +168,8 @@ vbe_handleInAddrAny(struct sess *sp, struct backend *bp)
 	if (sa->sa_family != AF_INET)
 		return (-1);
 	sain = (struct sockaddr_in *)sa;
-	if (sain->sin_addr.s_addr == INADDR_ANY) {
+	if ((sp->flags & SESS_T_HTTP) != 0 &&
+	    sain->sin_addr.s_addr == INADDR_ANY) {
 		struct http *hp = sp->wrkvar.bereq;
 		char host[NI_MAXHOST];
 		char *p = NULL, *port;
