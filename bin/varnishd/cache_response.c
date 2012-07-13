@@ -250,12 +250,14 @@ RES_WriteObjHdr(struct sess *sp)
 
 	CHECK_OBJ_NOTNULL(sp, SESS_MAGIC);
 	WRW_Reserve(sp, &sp->sp_fd, &sp->sp_ssl);
-	if (params->http_range_support &&
-	    sp->obj->response == 200 &&
-	    (sp->flags & SESS_F_WANTBODY) != 0 &&
-	    (sp->obj->flags & OBJECT_F_DONE) != 0 &&
-	    (sp->obj->flags & OBJECT_F_ZEROLEN) == 0 &&
-	    http_GetHdr(sp->http, H_Range, &p))
-		res_dorange(sp, p);
+	if (http_GetHdr(sp->http, H_Range, &p)) {
+		VSL_stats->range_req++;
+		if (params->http_range_support &&
+		    sp->obj->response == 200 &&
+		    (sp->flags & SESS_F_WANTBODY) != 0 &&
+		    (sp->obj->flags & OBJECT_F_DONE) != 0 &&
+		    (sp->obj->flags & OBJECT_F_ZEROLEN) == 0)
+			res_dorange(sp, p);
+	}
 	sp->acct_tmp.hdrbytes += http_Write(sp, sp->wrkvar.resp, 1);
 }
