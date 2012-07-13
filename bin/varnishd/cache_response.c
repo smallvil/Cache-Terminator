@@ -246,7 +246,7 @@ RES_BuildHttp(struct sess *sp)
 void
 RES_WriteObjHdr(struct sess *sp)
 {
-	char *r;
+	char *p;
 
 	CHECK_OBJ_NOTNULL(sp, SESS_MAGIC);
 	WRW_Reserve(sp, &sp->sp_fd, &sp->sp_ssl);
@@ -255,7 +255,7 @@ RES_WriteObjHdr(struct sess *sp)
 	    (sp->flags & SESS_F_WANTBODY) != 0 &&
 	    (sp->obj->flags & OBJECT_F_DONE) != 0 &&
 	    (sp->obj->flags & OBJECT_F_ZEROLEN) == 0 &&
-	    http_GetHdr(sp->http, H_Range, &r))
-		res_dorange(sp, r);
+	    http_GetHdr(sp->http, H_Range, &p))
+		res_dorange(sp, p);
 	sp->acct_tmp.hdrbytes += http_Write(sp, sp->wrkvar.resp, 1);
 }
