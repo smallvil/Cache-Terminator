@@ -175,6 +175,7 @@ res_dorange(struct sess *sp, const char *r)
 		VSL_stats->range_multi++;
 		return;
 	}
+	VSL_stats->range_single++;
 
 	if (high >= sp->obj->len)
 		high = sp->obj->len - 1;
