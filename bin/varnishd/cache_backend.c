@@ -417,10 +417,6 @@ vbe_GetVbe(struct sess *sp, struct backend *bp, enum vbe_type type)
 			     ((sp->flags & SESS_F_INADDR_ANY) != 0 &&
 			      (sp->flags & SESS_F_BACKEND_HINT) != 0 &&
 			      bcmp(&sp->hint, &vc->sa, vc->salen) == 0))) {
-			if ((sp->flags & SESS_F_INADDR_ANY) == 0 ||
-			    ((sp->flags & SESS_F_INADDR_ANY) != 0 &&
-			     (sp->flags & SESS_F_BACKEND_HINT) != 0 &&
-			     bcmp(&sp->hint, &vc->sa, vc->salen) == 0)) {
 				bp->refcount++;
 				assert(vc->backend == bp);
 				assert(vc->vc_fd >= 0);

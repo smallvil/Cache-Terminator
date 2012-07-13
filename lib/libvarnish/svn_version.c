@@ -1,7 +1,7 @@
-/* baaf595 */
+/* ef1d793 */
 #include <libvarnish.h>
 const char* svn_version(void)
 {
-	const char* SVN_Version = "baaf595";
+	const char* SVN_Version = "ef1d793";
 	return SVN_Version;
 }
