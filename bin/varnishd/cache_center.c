@@ -934,10 +934,23 @@ cnt_socksv5_connect(struct sess *sp)
 
 	Tcheck(stc->rxbuf);
 	p = stc->rxbuf.b;
-	q = (const unsigned short *)p;
+	if (p[0] != SOCKS_VER5) {
+		vca_close_session(sp, "wrong SOCKv5 version");
+		sp->step = STP_DONE;
+		return (SESS_CONTINUE);
+	}
+	if (p[1] != SOCKSv5_C_CONNECT) {
+		vca_close_session(sp, "unsupported SOCKv5 feature");
+		sp->step = STP_DONE;
+		return (SESS_CONTINUE);
+	}
+	if (p[2] != 0) {
+		vca_close_session(sp, "wrong format");
+		sp->step = STP_DONE;
+		return (SESS_CONTINUE);
+	}
 
-	assert(p[0] == SOCKS_VER5);
-	assert(p[1] == SOCKSv5_C_CONNECT);
+	q = (const unsigned short *)p;
 	assert(p[3] == SOCKSv5_I_IPV4);	/* only IPv4 supported */
 
 	sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
