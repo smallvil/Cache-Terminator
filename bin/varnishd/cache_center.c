@@ -845,7 +845,6 @@ cnt_socksv5_sendauth(struct sess *sp)
 
 	if ((sp->flags & SESS_F_ERROR) != 0) {
 		vca_close_session(sp, "no acceptable methods");
-		VBE_CloseFd(sp, &sp->vc, 0);
 		sp->step = STP_DONE;
 		return (SESS_CONTINUE);
 	}
