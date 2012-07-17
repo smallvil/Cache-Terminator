@@ -169,7 +169,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 	struct septum *st;
 	struct worker *w, ww;
 	unsigned char wlog[shm_workspace];
-	int i, n, stats_clean = 1;
+	int i, ms, n, stats_clean = 1;
 
 	THR_SetName("cache-worker");
 	w = &ww;
@@ -209,11 +209,29 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 		 * Process sockets waiting events.
 		 */
 #if defined(HAVE_EPOLL_CTL)
-		n = epoll_wait(w->fd, ev, EPOLLEVENT_MAX, 1 /* ms */);
+		if (w->nsocket > 0 &&
+		    w->nwaiting == 0 &&
+		    w->nreadylist == 0) {
+			VSL_stats->timeout_1000ms++;
+			ms = 1000;	/* ms */
+		} else {
+			VSL_stats->timeout_1ms++;
+			ms = 1;
+		}
+		n = epoll_wait(w->fd, ev, EPOLLEVENT_MAX, ms);
 #endif
 #if defined(HAVE_KQUEUE)
-		tv.tv_sec = 0;
-		tv.tv_nsec = 1000000;	/* waits 1 milisecond */
+		if (w->nsocket > 0 &&
+		    w->nwaiting == 0 &&
+		    w->nreadylist == 0) {
+			VSL_stats->timeout_1000ms++;
+			tv.tv_sec = 1;
+			tv.tv_nsec = 0;
+		} else {
+			VSL_stats->timeout_1ms++;
+			tv.tv_sec = 0;
+			tv.tv_nsec = 1000000;	/* waits 1 milisecond */
+		}
 		n = kevent(w->fd, NULL, 0, ev, KQEVENT_MAX, &tv);
 #endif
 		for (ep = ev, i = 0; i < n; i++, ep++, w->nsocket--) {
