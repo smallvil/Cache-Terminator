@@ -170,6 +170,7 @@ MAC_STAT(n_drainpipe_wait,	uint64_t, 0, 'a', "N drainpipe on the waiting")
 
 MAC_STAT(socks_req,		uint64_t, 1, 'a', "SOCKS request received")
 MAC_STAT(socks_v4_req,		uint64_t, 1, 'a', "SOCKSv4 request received")
+MAC_STAT(socks_v4a_req,		uint64_t, 1, 'a', "SOCKSv4a request received")
 MAC_STAT(socks_v4_error,	uint64_t, 1, 'a', "SOCKSv4 error")
 MAC_STAT(socks_v5_auth,		uint64_t, 1, 'a', "SOCKSv5 auth received")
 MAC_STAT(socks_v5_error,	uint64_t, 1, 'a', "SOCKSv5 error")

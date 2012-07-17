@@ -585,7 +585,6 @@ cnt_socks_recv(struct sess *sp)
 	Tcheck(stc->rxbuf);
 	p = stc->rxbuf.b;
 	if (p[0] == SOCKS_VER4) {
-		sp->wrk->stats.socks_v4_req++;
 		sp->step = STP_SOCKSv4_REQ;
 		return (SESS_CONTINUE);
 	}
@@ -646,6 +645,8 @@ cnt_socksv4_connect(struct sess *sp)
 		/*
 		 * If here, it means the header is for SOCKSv4a.
 		 */
+		sp->wrk->stats.socks_v4a_req++;
+
 		i = 8;
 		while (p[i++] != '\0')	/* Skip the user ID string. */
 			;
@@ -670,6 +671,7 @@ cnt_socksv4_connect(struct sess *sp)
 			break;
 		}
 	} else {
+		sp->wrk->stats.socks_v4_req++;
 		sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
 		bzero(in4, sp->socks.sockaddrlen);
 		in4->sin_family = AF_INET;
