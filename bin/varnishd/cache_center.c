@@ -995,6 +995,7 @@ cnt_socksv5_connect(struct sess *sp)
 			return (SESS_CONTINUE);
 		}
 		i = 0;
+		assert(hp->h_addr_list[i] != NULL);
 		while (hp->h_addr_list[i] != NULL) {
 			sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
 			bzero(in4, sp->socks.sockaddrlen);
