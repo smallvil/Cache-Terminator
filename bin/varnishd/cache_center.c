@@ -627,9 +627,11 @@ cnt_socksv4_req(struct sess *sp)
 static enum sess_status
 cnt_socksv4_connect(struct sess *sp)
 {
+	struct hostent *hp;
 	struct sockaddr_in *in4 = (struct sockaddr_in *)&sp->socks.sockaddr;
 	struct socks_conn *stc = sp->socks.stc;
 	struct vbe_conn *vc;
+	int i;
 	const unsigned short *q;
 	const char *p;
 
@@ -640,16 +642,41 @@ cnt_socksv4_connect(struct sess *sp)
 	assert(p[0] == SOCKS_VER4);
 	assert(p[1] == SOCKSv4_C_CONNECT);
 
-	if (p[4] == 0 && p[5] == 0 && p[6] == 0 && p[7] != 0)
-		assert(0 == 1);		/* FQDN */
-
-	sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
-	bzero(in4, sp->socks.sockaddrlen);
-	in4->sin_family = AF_INET;
-	assert(sizeof(struct in_addr) == 4);
-	bcopy(p + 4, &in4->sin_addr, sizeof(struct in_addr));
-	in4->sin_port = q[1];
-
+	if (p[4] == 0 && p[5] == 0 && p[6] == 0 && p[7] != 0) {
+		/*
+		 * If here, it means the header is for SOCKSv4a.
+		 */
+		i = 8;
+		while (p[i++] != '\0')	/* Skip the user ID string. */
+			;
+		sp->socks.domainname = WS_Dup(sp->ws, &p[i]);
+		AN(sp->socks.domainname);
+		hp = gethostbyname(sp->socks.domainname);
+		if (hp == NULL) {
+			vca_close_session(sp, "gethostbyname error");
+			sp->step = STP_DONE;
+			return (SESS_CONTINUE);
+		}
+		i = 0;
+		assert(hp->h_addr_list[i] != NULL);
+		while (hp->h_addr_list[i] != NULL) {
+			sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
+			bzero(in4, sp->socks.sockaddrlen);
+			in4->sin_family = AF_INET;
+			assert(sizeof(struct in_addr) == 4);
+			in4->sin_addr = *((struct in_addr *)hp->h_addr_list[i]);
+			in4->sin_port = q[1];
+			i++;
+			break;
+		}
+	} else {
+		sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
+		bzero(in4, sp->socks.sockaddrlen);
+		in4->sin_family = AF_INET;
+		assert(sizeof(struct in_addr) == 4);
+		bcopy(p + 4, &in4->sin_addr, sizeof(struct in_addr));
+		in4->sin_port = q[1];
+	}
 	if (params->diag_bitmap & 0x00080000) {
 		char buf[BUFSIZ];
 
