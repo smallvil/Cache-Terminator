@@ -926,9 +926,11 @@ cnt_socksv5_req(struct sess *sp)
 static enum sess_status
 cnt_socksv5_connect(struct sess *sp)
 {
+	struct hostent *hp;
 	struct sockaddr_in *in4 = (struct sockaddr_in *)&sp->socks.sockaddr;
 	struct socks_conn *stc = sp->socks.stc;
 	struct vbe_conn *vc;
+	int i;
 	const unsigned short *q;
 	const char *p;
 
@@ -939,26 +941,52 @@ cnt_socksv5_connect(struct sess *sp)
 		sp->step = STP_DONE;
 		return (SESS_CONTINUE);
 	}
-	if (p[1] != SOCKSv5_C_CONNECT) {
-		vca_close_session(sp, "unsupported SOCKv5 feature");
-		sp->step = STP_DONE;
-		return (SESS_CONTINUE);
-	}
+	assert(p[1] == SOCKSv5_C_CONNECT);
 	if (p[2] != 0) {
 		vca_close_session(sp, "wrong format");
 		sp->step = STP_DONE;
 		return (SESS_CONTINUE);
 	}
+	switch (p[3]) {
+	case SOCKSv5_I_IPV4:
+		q = (const unsigned short *)p;
 
-	q = (const unsigned short *)p;
-	assert(p[3] == SOCKSv5_I_IPV4);	/* only IPv4 supported */
-
-	sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
-	bzero(in4, sp->socks.sockaddrlen);
-	in4->sin_family = AF_INET;
-	assert(sizeof(struct in_addr) == 4);
-	bcopy(p + 4, &in4->sin_addr, sizeof(struct in_addr));
-	in4->sin_port = q[4];
+		sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
+		bzero(in4, sp->socks.sockaddrlen);
+		in4->sin_family = AF_INET;
+		assert(sizeof(struct in_addr) == 4);
+		bcopy(p + 4, &in4->sin_addr, sizeof(struct in_addr));
+		in4->sin_port = q[4];
+		break;
+	case SOCKSv5_I_DOMAINNAME:
+		sp->socks.domainname = WS_nDup(sp->ws, p + 5, p[4]);
+		AN(sp->socks.domainname);
+		hp = gethostbyname(sp->socks.domainname);
+		if (hp == NULL) {
+			vca_close_session(sp, "gethostbyname error");
+			sp->step = STP_DONE;
+			return (SESS_CONTINUE);
+		}
+		i = 0;
+		while (hp->h_addr_list[i] != NULL) {
+			sp->socks.sockaddrlen = sizeof(struct sockaddr_in);
+			bzero(in4, sp->socks.sockaddrlen);
+			in4->sin_family = AF_INET;
+			assert(sizeof(struct in_addr) == 4);
+			in4->sin_addr = *((struct in_addr *)hp->h_addr_list[i]);
+			q = (const unsigned short *)(p + 5 + (int)p[4]);
+			in4->sin_port = *q;
+			i++;
+			break;
+		}
+		break;
+	case SOCKSv5_I_IPV6:
+		assert(0 == 1);		/* IPv6 isn't supported yet. */
+	default:
+		vca_close_session(sp, "unknown address type");
+		sp->step = STP_DONE;
+		return (SESS_CONTINUE);
+	}
 
 	/*
 	 * XXX there are two points to call `vcl_socks_req' method.  Should

@@ -147,6 +147,22 @@ WS_Dup(struct ws *ws, const char *s)
 	return (p);
 }
 
+char *
+WS_nDup(struct ws *ws, const char *s, size_t l)
+{
+	char *p;
+
+	WS_Assert(ws);
+	p = WS_Alloc(ws, l + 1);
+	if (p != NULL) {
+		memcpy(p, s, l);
+		p[l] = '\0';
+	}
+	DSL(0x02, SLT_Debug, 0, "WS_nDup(%p, \"%s\", %zd) = %p", ws, s, p, l);
+	WS_Assert(ws);
+	return (p);
+}
+
 unsigned
 WS_Free(const struct ws *ws)
 {

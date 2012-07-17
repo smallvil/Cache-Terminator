@@ -254,8 +254,8 @@ struct http_conn {
 #define	SOCKSv5_S_NOCMDSUPPORT	0x7	/* Command not supported */
 #define	SOCKSv5_S_NOADDRSUPPORT	0x8	/* Address type not supported */
 #define	SOCKSv5_I_IPV4		0x1	/* IP V4 address */
-#define	SOCKSv5_I_DOMAINNAME	0x2	/* DOMAINNAME */
-#define	SOCKSv5_I_IPV6		0x3	/* IP V6 address */
+#define	SOCKSv5_I_DOMAINNAME	0x3	/* DOMAINNAME */
+#define	SOCKSv5_I_IPV6		0x4	/* IP V6 address */
 #define	SOCKSv5_A_NOAUTH	0x0	/* NO AUTHENTICATION REQUIRED */
 #define	SOCKSv5_A_GSSAPI	0x1	/* GSSAPI */
 #define	SOCKSv5_A_USERPW	0x2	/* USERNAME / PASSWORD */
@@ -723,6 +723,7 @@ struct sess {
 
 	struct {
 		struct socks_conn	stc[1];
+		char			*domainname;
 		struct sockaddr		sockaddr;
 		socklen_t		sockaddrlen;
 		struct socksv4_resp	resp;
@@ -1154,6 +1155,7 @@ void WS_Assert(const struct ws *ws);
 void WS_Reset(struct ws *ws, char *p);
 char *WS_Alloc(struct ws *ws, unsigned bytes);
 char *WS_Dup(struct ws *ws, const char *);
+char *WS_nDup(struct ws *ws, const char *s, size_t l);
 char *WS_Snapshot(struct ws *ws);
 unsigned WS_Free(const struct ws *ws);
 
