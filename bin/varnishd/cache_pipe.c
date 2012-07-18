@@ -209,6 +209,7 @@ pie_send_toclient(struct pipe *dp)
 		/* XXX a hack; see a comment on TUNNEL_PIPE_SEND_TOBACKEND */
 		VSL_stats->pipe_callout_client++;
 		callout_reset(dp->wrk, &st->co, 0, pie_EventTimeout, dp);
+		PIE_Sleep(dp);
 		return (PIPE_SLEEP);
 	}
 	if (i <= 0) {
@@ -300,10 +301,34 @@ PIE_Wakeup(struct pipe *dp)
 {
 	struct septum *st = &dp->septum;
 	struct sess *sp;
+	struct worker *w;
 
 	CAST_OBJ_NOTNULL(sp, dp->sess, SESS_MAGIC);
+	CAST_OBJ_NOTNULL(w, sp->wrk, WORKER_MAGIC);
 
-	SPT_Wakeup(sp->wrk, st);
+	SPT_Wakeup(w, st);
+	w->nwaiting--;
+	assert(w->nwaiting >= 0);
+
+	if (params->diag_bitmap & 0x00100000)
+		WSL(w, SLT_Debug, sp->sp_fd, "PIPE wakeup <w %p sp %p>",
+		    w, sp);
+}
+
+void
+PIE_Sleep(struct pipe *dp)
+{
+	struct sess *sp;
+	struct worker *w;
+
+	CAST_OBJ_NOTNULL(sp, dp->sess, SESS_MAGIC);
+	CAST_OBJ_NOTNULL(w, sp->wrk, WORKER_MAGIC);
+
+	w->nwaiting++;
+
+	if (params->diag_bitmap & 0x00100000)
+		WSL(w, SLT_Debug, sp->sp_fd,
+		    "PIPE sleep <w %p sp %p>", w, sp);
 }
 
 void

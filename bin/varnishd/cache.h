@@ -1048,6 +1048,7 @@ void PIE_EventAdd(struct pipe *dp);
 void PIE_EventDel(struct pipe *dp);
 enum pipe_status PIE_Session(struct pipe *dp);
 void PIE_Wakeup(struct pipe *dp);
+void PIE_Sleep(struct pipe *dp);
 void PipeSession(struct sess *sp);
 void PIE_Init(struct sess *sp);
 

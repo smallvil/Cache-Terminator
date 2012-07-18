@@ -387,6 +387,7 @@ cnt_tunnel_pipe(struct sess *sp)
 
 	PIE_Init(sp);
 	CAST_PIPE_NOTNULL(dp, sp->vc, PIPE_MAGIC);
+	PIE_Sleep(dp);
 	PIE_Wakeup(dp);
 
 	sp->step = STP_TUNNEL_PIPE_RECV;
@@ -1175,6 +1176,7 @@ cnt_socks_pipe(struct sess *sp)
 
 	PIE_Init(sp);
 	CAST_PIPE_NOTNULL(dp, sp->vc, PIPE_MAGIC);
+	PIE_Sleep(dp);
 	PIE_Wakeup(dp);
 
 	sp->step = STP_SOCKS_PIPE_RECV;
@@ -2863,6 +2865,7 @@ cnt_http_pipe_connect(struct sess *sp)
 
 	PIE_Init(sp);
 	CAST_PIPE_NOTNULL(dp, sp->vc, PIPE_MAGIC);
+	PIE_Sleep(dp);
 	PIE_Wakeup(dp);
 
 	/*
