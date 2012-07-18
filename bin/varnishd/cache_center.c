@@ -1216,6 +1216,12 @@ cnt_socks_pipe_recv_fromclient(struct sess *sp)
 		return (SESS_WAIT);
 	}
 	if (i == -1 || i == 0) {
+		sp->doclose = "CFD_read() error or eof";
+		if (i == -1)
+			WSP(sp, SLT_Error, "%s: read(2) %d %s", __func__, errno,
+			    strerror(errno));
+		else
+			WSP(sp, SLT_Error, "%s: read(2) eof", __func__);
 		dp->flags |= PIPE_F_SESSDONE;
 		if ((dp->flags & PIPE_F_PIPEDONE) != 0) {
 			sp->step = STP_SOCKS_PIPE_END;
@@ -1317,7 +1323,7 @@ cnt_socks_end(struct sess *sp)
 		CNT_EmitTCPInfo(sp, sp->sp_fd, &sp->t_last, "c", sp->addr,
 		    sp->port, 1);
 
-	vca_close_session(sp, "pipe");
+	vca_close_session(sp, sp->doclose);
 	VBE_CloseFd(sp, &sp->vc, 0);
 	sp->step = STP_DONE;
 	return (SESS_CONTINUE);

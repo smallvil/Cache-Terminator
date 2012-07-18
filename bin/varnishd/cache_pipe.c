@@ -154,6 +154,11 @@ pie_recv_frombackend(struct pipe *dp)
 		return (PIPE_WAIT);
 	}
 	if (i <= 0) {
+		if (i == -1)
+			WSP(sp, SLT_Error, "%s: read(2) %d %s", __func__, errno,
+			    strerror(errno));
+		else
+			WSP(sp, SLT_Error, "%s: read(2) eof", __func__);
 		dp->flags |= PIPE_F_PIPEDONE;
 		if ((dp->flags & PIPE_F_SESSDONE) != 0) {
 			dp->step = PIE_END;
