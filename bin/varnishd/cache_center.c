@@ -653,6 +653,7 @@ cnt_socksv4_connect(struct sess *sp)
 			;
 		sp->socks.domainname = WS_Dup(sp->ws, &p[i]);
 		AN(sp->socks.domainname);
+		VSL_stats->n_gethostbyname++;
 		hp = gethostbyname(sp->socks.domainname);
 		if (hp == NULL) {
 			vca_close_session(sp, "gethostbyname error");
@@ -991,6 +992,7 @@ cnt_socksv5_connect(struct sess *sp)
 	case SOCKSv5_I_DOMAINNAME:
 		sp->socks.domainname = WS_nDup(sp->ws, p + 5, p[4]);
 		AN(sp->socks.domainname);
+		VSL_stats->n_gethostbyname++;
 		hp = gethostbyname(sp->socks.domainname);
 		if (hp == NULL) {
 			vca_close_session(sp, "gethostbyname error");

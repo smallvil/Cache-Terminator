@@ -117,6 +117,7 @@ vbe_gethostbyname(struct sess *sp, struct sockaddr_in *sain, socklen_t *sainlen,
 
 	WSP(sp, SLT_BackendGetHostByName, "%s %s", hostname, port);
 
+	VSL_stats->n_gethostbyname++;
 	hp = gethostbyname(hostname);
 	if (hp == NULL)
 		return (-1);

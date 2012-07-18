@@ -191,3 +191,5 @@ MAC_STAT(range_badfmt,		uint64_t, 0, 'a', "Bad range format")
 
 MAC_STAT(timeout_1000ms,	uint64_t, 0, 'a', "1000 ms timeout")
 MAC_STAT(timeout_1ms,		uint64_t, 0, 'a', "1 ms timeout")
+
+MAC_STAT(n_gethostbyname,	uint64_t, 0, 'a', "N gethostbyname(3) call")
