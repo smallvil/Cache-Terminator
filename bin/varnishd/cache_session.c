@@ -384,6 +384,7 @@ SES_Sleep(struct sess *sp)
 {
 	struct worker *w = sp->wrk;
 
+	assert(w->nwaiting >= 0);
 	w->nwaiting++;
 
 	if (params->diag_bitmap & 0x00100000)

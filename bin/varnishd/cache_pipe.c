@@ -324,6 +324,7 @@ PIE_Sleep(struct pipe *dp)
 	CAST_OBJ_NOTNULL(sp, dp->sess, SESS_MAGIC);
 	CAST_OBJ_NOTNULL(w, sp->wrk, WORKER_MAGIC);
 
+	assert(w->nwaiting >= 0);
 	w->nwaiting++;
 
 	if (params->diag_bitmap & 0x00100000)
