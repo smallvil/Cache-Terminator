@@ -208,6 +208,10 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 		/*
 		 * Process sockets waiting events.
 		 */
+		if (params->diag_bitmap & 0x00400000)
+			VSL(SLT_WorkThread, 0, "%p %d %d %d",
+			    (void *)pthread_self(), w->nsocket, w->nwaiting,
+			    w->nreadylist);
 #if defined(HAVE_EPOLL_CTL)
 		if (w->nsocket > 0 &&
 		    w->nreadylist == 0) {

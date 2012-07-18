@@ -859,6 +859,7 @@ static const struct parspec input_parspec[] = {
 		"  0x00080000 - state machine.\n"
 		"  0x00100000 - sleep and wake up.\n"
 		"  0x00200000 - backend connection.\n"
+		"  0x00400000 - WorkerThread.\n"
 		"  0x80000000 - do edge-detection on digest.\n"
 		"Use 0x notation and do the bitor in your head :-)\n",
 		0,
