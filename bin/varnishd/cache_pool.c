@@ -214,6 +214,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 			    w->nreadylist);
 #if defined(HAVE_EPOLL_CTL)
 		if (w->nsocket > 0 &&
+		    w->nwaiting == 0 &&
 		    w->nreadylist == 0) {
 			VSL_stats->timeout_1000ms++;
 			ms = 1000;	/* ms */
@@ -225,6 +226,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 #endif
 #if defined(HAVE_KQUEUE)
 		if (w->nsocket > 0 &&
+		    w->nwaiting == 0 &&
 		    w->nreadylist == 0) {
 			VSL_stats->timeout_1000ms++;
 			tv.tv_sec = 1;
@@ -291,7 +293,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 			stats_clean = 1;
 		}
 		/* if worker thread has something to do we couldn't sleep */
-		if (w->nsocket > 0 || w->nreadylist > 0)
+		if (w->nsocket > 0 || w->nwaiting > 0 || w->nreadylist > 0)
 			continue;
 		/* Going sleeping from here. */
 		if (isnan(w->lastused))
