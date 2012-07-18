@@ -1097,7 +1097,7 @@ cnt_socksv5_resp(struct sess *sp)
 static enum sess_status
 cnt_socksv5_send(struct sess *sp)
 {
-	struct sockaddr sa;
+	struct sockaddr_storage ss;
 	struct sockaddr_in *sap;
 	struct vbe_conn *vc = sp->vc;
 	socklen_t slen, tlen;
@@ -1118,8 +1118,9 @@ cnt_socksv5_send(struct sess *sp)
 		 * XXX a system call!.  Called multiple times due to
 		 * non-blocking!
 		 */
-		AZ(getsockname(vc->vc_fd, &sa, &slen));
-		sap = (struct sockaddr_in *)&sa;
+		slen = sizeof(ss);
+		AZ(getsockname(vc->vc_fd, (struct sockaddr *)&ss, &slen));
+		sap = (struct sockaddr_in *)&ss;
 		buf[3] = SOCKSv5_I_IPV4;
 		assert(sizeof(struct in_addr) == 4);
 		memcpy(&buf[4], &sap->sin_addr, sizeof(struct in_addr));
