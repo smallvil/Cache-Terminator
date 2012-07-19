@@ -167,6 +167,18 @@ cnt_timeout(struct sess *sp)
 		SESS_ERROR(sp, 503, "pipe connect timeout");
 		sp->step = STP_HTTP_PIPE_END;
 		return (SESS_CONTINUE);
+	case STP_HTTP_PIPE_RECV_FROMCLIENT:
+		CAST_PIPE_NOTNULL(dp, sp->vc, PIPE_MAGIC);
+		CAST_OBJ_NOTNULL(vc, &dp->vc, VBE_CONN_MAGIC);
+		dp->flags |= PIPE_F_SESSDONE;
+		if ((dp->flags & PIPE_F_PIPEDONE) != 0) {
+			sp->step = STP_HTTP_PIPE_CLOSEWAIT;
+			return (SESS_CONTINUE);
+		}
+		(void)shutdown(sp->sp_fd, SHUT_RD);	/* XXX */
+		(void)shutdown(vc->vc_fd, SHUT_WR);	/* XXX */
+		sp->step = STP_HTTP_PIPE_CLOSEWAIT;
+		return (SESS_CONTINUE);
 	case STP_HTTP_WAIT_RECV:
 		vca_close_session(sp, "error");
 		sp->step = STP_DONE;
