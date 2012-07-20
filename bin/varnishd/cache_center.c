@@ -1656,6 +1656,8 @@ cnt_http_lookup(struct sess *sp)
 	struct objcore *oc;
 	struct object *o;
 	struct objhead *oh;
+	int needpass = 0;
+	char *p;
 
 	CHECK_OBJ_NOTNULL(sp, SESS_MAGIC);
 	CHECK_OBJ_NOTNULL(sp->vcl, VCL_CONF_MAGIC);
@@ -1684,7 +1686,26 @@ cnt_http_lookup(struct sess *sp)
 	CHECK_OBJ_NOTNULL(o, OBJECT_MAGIC);
 	sp->obj = o;
 
-	if (oc->flags & OC_F_PASS) {
+	/*
+	 * Handles Cache-Control: max-age=0, Cache-Control: no-cache and
+	 * Pragma: no-cache cases.  For all, the cached object would be
+	 * dropped though max-age=0 should be handled specially.
+	 *
+	 * XXX max-age=0 should revalidate the content using If-Modified-Since:
+	 * to the origin server.
+	 */
+	if (http_GetHdrField(sp->http, H_Cache_Control, "max-age", &p) &&
+	    p != NULL) {
+		unsigned max_age;
+
+		max_age = strtoul(p, NULL, 0);
+		if (max_age == 0)
+			needpass = 1;
+	}
+	if (http_GetHdrField(sp->http, H_Cache_Control, "no-cache", NULL) ||
+	    http_GetHdrField(sp->http, H_Pragma, "no-cache", NULL) ||
+	    needpass == 1 ||
+	    oc->flags & OC_F_PASS) {
 		sp->wrk->stats.cache_hitpass++;
 		WSP(sp, SLT_HitPass, "%u", sp->obj->xid);
 		HSH_Deref(sp->wrk, &sp->obj);
