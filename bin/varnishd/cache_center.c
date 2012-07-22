@@ -3414,6 +3414,8 @@ cnt_http_deliver_end(struct sess *sp)
 			sp->acct_tmp.fetch++;
 			if (sp->obj->objcore != NULL)
 				AN(sp->obj->flags & OBJECT_F_CACHEABLE);
+			if (sp->obj->len == 0)
+				AN(sp->obj->flags & OBJECT_F_ZEROLEN);
 			HSH_Deref(sp->wrk, &sp->obj);
 		} else {
 			sp->doclose = "fetcherror";
