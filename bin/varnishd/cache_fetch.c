@@ -445,6 +445,8 @@ fet_done(struct fetch *fp)
 			uu += st->len;
 		assert(uu == sp->obj->len);
 	}
+	if (sp->obj->len == 0)
+		sp->obj->flags |= OBJECT_F_ZEROLEN;
 	sp->obj->flags |= OBJECT_F_DONE;
 
 	/* all fetch is done so wakes up all */
