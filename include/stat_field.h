@@ -174,6 +174,7 @@ MAC_STAT(socks_v4a_req,		uint64_t, 1, 'a', "SOCKSv4a request received")
 MAC_STAT(socks_v4_error,	uint64_t, 1, 'a', "SOCKSv4 error")
 MAC_STAT(socks_v5_auth,		uint64_t, 1, 'a', "SOCKSv5 auth received")
 MAC_STAT(socks_v5_error,	uint64_t, 1, 'a', "SOCKSv5 error")
+MAC_STAT(socks_timeout,		uint64_t, 1, 'a', "SOCKS timeout")
 
 MAC_STAT(tunnel_req,		uint64_t, 1, 'a', "TUNNEL request received")
 

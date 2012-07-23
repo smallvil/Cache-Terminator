@@ -202,24 +202,29 @@ cnt_timeout(struct sess *sp)
 		sp->step = STP_HTTP_DELIVER_BODY_END;
 		return (SESS_CONTINUE);
 	case STP_SOCKS_RECV:
+		VSL_stats->socks_timeout++;
 		vca_close_session(sp, "SOCKS read timeout");
 		sp->step = STP_DONE;
 		return (SESS_CONTINUE);
 	case STP_SOCKSv4_CONNECT_DO:
+		VSL_stats->socks_timeout++;
 		SESS_ERROR(sp, SOCKSv4_S_REJECTED,
 		    "SOCKSv4 connect timeout");
 		sp->step = STP_SOCKSv4_ERROR;
 		return (SESS_CONTINUE);
 	case STP_SOCKSv5_RECV:
+		VSL_stats->socks_timeout++;
 		vca_close_session(sp, "SOCKSv5 read timeout");
 		sp->step = STP_DONE;
 		return (SESS_CONTINUE);
 	case STP_SOCKSv5_CONNECT_DO:
+		VSL_stats->socks_timeout++;
 		SESS_ERROR(sp, SOCKSv5_S_SOCKS_FAIL,
 		    "SOCKSv5 connect timeout");
 		sp->step = STP_SOCKSv5_ERROR;
 		return (SESS_CONTINUE);
 	case STP_SOCKS_PIPE_RECV_FROMCLIENT:
+		VSL_stats->socks_timeout++;
 		CAST_PIPE_NOTNULL(dp, sp->vc, PIPE_MAGIC);
 		CAST_OBJ_NOTNULL(vc, &dp->vc, VBE_CONN_MAGIC);
 		dp->flags |= PIPE_F_SESSDONE;
