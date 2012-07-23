@@ -88,6 +88,8 @@ pie_timeout(struct pipe *dp)
 	CAST_OBJ_NOTNULL(vc, sp->vc, VBE_CONN_MAGIC);
 
 	sp->acct_tmp.sess_timeout++;
+	if ((sp->flags & SESS_T_SOCKS) != 0)
+		VSL_stats->socks_timeout++;
 
 	dp->flags |= PIPE_F_PIPEDONE;
 	if ((dp->flags & PIPE_F_SESSDONE) != 0) {
