@@ -59,7 +59,6 @@ MAC_STAT(fetch_oldhttp,		uint64_t, 1, 'a', "Fetch pre HTTP/1.1 closed")
 MAC_STAT(fetch_zero,		uint64_t, 1, 'a', "Fetch zero len")
 MAC_STAT(fetch_failed,		uint64_t, 1, 'a', "Fetch failed")
 
-
 MAC_STAT(n_sess_mem,		uint64_t, 0, 'i', "N struct sess_mem")
 MAC_STAT(n_sess,		uint64_t, 0, 'i', "N struct sess")
 MAC_STAT(n_object,		uint64_t, 1, 'i', "N struct object")
