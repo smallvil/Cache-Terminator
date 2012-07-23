@@ -158,6 +158,8 @@ cnt_timeout(struct sess *sp)
 	struct pipe *dp;
 	struct vbe_conn *vc;
 
+	sp->acct_tmp.sess_timeout++;
+
 	switch (prevstep) {
 	case STP_HTTP_PIPE_CONNECT:
 		/*

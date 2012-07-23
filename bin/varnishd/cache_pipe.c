@@ -87,6 +87,8 @@ pie_timeout(struct pipe *dp)
 	CAST_OBJ_NOTNULL(sp, dp->sess, SESS_MAGIC);
 	CAST_OBJ_NOTNULL(vc, sp->vc, VBE_CONN_MAGIC);
 
+	sp->acct_tmp.sess_timeout++;
+
 	dp->flags |= PIPE_F_PIPEDONE;
 	if ((dp->flags & PIPE_F_SESSDONE) != 0) {
 		dp->step = PIE_END;

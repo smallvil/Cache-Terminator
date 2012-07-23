@@ -34,6 +34,7 @@
  */
 
 ACCT(sess)
+ACCT(sess_timeout)
 ACCT(req)
 ACCT(pipe)
 ACCT(pass)

@@ -74,6 +74,10 @@ FET_SessionTimeout(void *arg)
 static enum fetch_status
 fet_timeout(struct fetch *fp)
 {
+	struct sess *sp;
+
+	CAST_OBJ_NOTNULL(sp, fp->sess, SESS_MAGIC);
+	sp->acct_tmp.sess_timeout++;
 
 	fp->step = FET_ERROR;
 	return (FETCH_CONTINUE);

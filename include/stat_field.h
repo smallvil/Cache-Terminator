@@ -93,6 +93,7 @@ MAC_STAT(n_objoverflow,		uint64_t, 1, 'a',
 					"Objects overflowing workspace")
 
 MAC_STAT(s_sess,		uint64_t, 1, 'a', "Total Sessions")
+MAC_STAT(s_sess_timeout,	uint64_t, 1, 'a', "Total Session timeout")
 MAC_STAT(s_req,			uint64_t, 1, 'a', "Total Requests")
 MAC_STAT(s_pipe,		uint64_t, 1, 'a', "Total pipe")
 MAC_STAT(s_pass,		uint64_t, 1, 'a', "Total pass")
