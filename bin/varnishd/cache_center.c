@@ -253,6 +253,7 @@ cnt_WakeupCallout(void *arg)
 {
 	struct sess *sp = arg;
 
+	callout_stop(sp->wrk, &st->co);
 	SES_Wakeup(sp);
 }
 
