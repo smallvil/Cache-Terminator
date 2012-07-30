@@ -197,6 +197,13 @@ cnt_timeout(struct sess *sp)
 		SESS_ERROR(sp, 503, "read error");
 		sp->step = STP_HTTP_FETCH_ERROR;
 		return (SESS_CONTINUE);
+	case STP_HTTP_FETCH_REQ_BODY_SEND:
+		CAST_OBJ_NOTNULL(vc, sp->vc, VBE_CONN_MAGIC);
+		WRW_Release(sp);
+		VBE_CloseFd(sp, &sp->vc, 0);
+		SESS_ERROR(sp, 503, "write error");
+		sp->step = STP_HTTP_FETCH_ERROR;
+		return (SESS_CONTINUE);
 	case STP_HTTP_FETCH_RESP_RECV_FIRSTBYTE:
 		CAST_OBJ_NOTNULL(htc, sp->wrkvar.htc, HTTP_CONN_MAGIC);
 		WS_ReleaseP(htc->ws, htc->rxbuf.b);
