@@ -2004,6 +2004,7 @@ cnt_http_fetch_req_body_begin(struct sess *sp)
 {
 #define	XXX_BUFLEN	8192
 
+	sp->flags |= SESS_F_REQBODY;
 	/* Sets a revert point. */
 	AZ(sp->ws_fet);
 	sp->ws_fet = WS_Snapshot(sp->ws);
@@ -2040,10 +2041,6 @@ cnt_http_fetch_req_body_recv(struct sess *sp)
 	if (rdcnt == -1 || rdcnt == 0) {
 		CAST_OBJ_NOTNULL(vc, sp->vc, VBE_CONN_MAGIC);
 		WRW_Release(sp);
-		if (vc->recycled) {
-			sp->step = STP_HTTP_FETCH_RETRY;
-			return (SESS_CONTINUE);
-		}
 		VBE_CloseFd(sp, &sp->vc, 0);
 		SESS_ERROR(sp, 503, "read error");
 		sp->step = STP_HTTP_FETCH_ERROR;
@@ -2084,10 +2081,6 @@ cnt_http_fetch_req_body_send(struct sess *sp)
 	if (i == -1) {
 		CAST_OBJ_NOTNULL(vc, sp->vc, VBE_CONN_MAGIC);
 		WRW_Release(sp);
-		if (vc->recycled) {
-			sp->step = STP_HTTP_FETCH_RETRY;
-			return (SESS_CONTINUE);
-		}
 		VBE_CloseFd(sp, &sp->vc, 0);
 		SESS_ERROR(sp, 503, "write error");
 		sp->step = STP_HTTP_FETCH_ERROR;
@@ -2157,7 +2150,9 @@ cnt_http_fetch_resp_recv_firstbyte(struct sess *sp)
 	if (i < 0) {
 		WSP(sp, SLT_FetchError, "http first read error: %d %d (%s)",
 		    i, errno, strerror(errno));
-		if (i == -1 && vc->recycled) {
+		if (i == -1 &&
+		    (sp->flags & SESS_F_REQBODY) == 0 &&
+		    vc->recycled) {
 			sp->step = STP_HTTP_FETCH_RETRY;
 			return (SESS_CONTINUE);
 		}
@@ -2194,7 +2189,9 @@ cnt_http_fetch_resp_recv_nextbytes(struct sess *sp)
 	if (i < 0) {
 		WSP(sp, SLT_FetchError, "http read error: %d %d (%s)",
 		    i, errno, strerror(errno));
-		if (i == -1 && vc->recycled) {
+		if (i == -1 &&
+		    (sp->flags & SESS_F_REQBODY) == 0 &&
+		    vc->recycled) {
 			sp->step = STP_HTTP_FETCH_RETRY;
 			return (SESS_CONTINUE);
 		}

@@ -615,6 +615,7 @@ struct sess {
 #define	SESS_T_HTTP		0x00010000
 #define	SESS_T_SOCKS		0x00020000
 #define	SESS_T_TUNNEL		0x00040000
+#define	SESS_F_REQBODY		0x00080000	/* if the req includes body */
 	struct septum		septum;
 
 	int			restarts;
