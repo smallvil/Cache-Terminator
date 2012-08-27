@@ -214,8 +214,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 			    w->nreadylist);
 		if (w->nsocket > 0) {
 #if defined(HAVE_EPOLL_CTL)
-			if (w->nwaiting == 0 &&
-			    w->nreadylist == 0) {
+			if (w->nwaiting == 0) {
 				VSL_stats->timeout_1000ms++;
 				ms = 1000;	/* ms */
 			} else {
@@ -225,8 +224,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 			n = epoll_wait(w->fd, ev, EPOLLEVENT_MAX, ms);
 #endif
 #if defined(HAVE_KQUEUE)
-			if (w->nwaiting == 0 &&
-			    w->nreadylist == 0) {
+			if (w->nwaiting == 0) {
 				VSL_stats->timeout_1000ms++;
 				tv.tv_sec = 1;
 				tv.tv_nsec = 0;
