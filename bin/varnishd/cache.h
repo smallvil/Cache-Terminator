@@ -387,6 +387,7 @@ struct worker {
 	int			fd;		/* EP: fd for epoll */
 	int			nsocket;	/* EP: num of waiting sockets */
 
+	int			readypipe[2];
 	struct lock		readylist_mtx;
 	VTAILQ_HEAD(, septum)	readylist;
 	unsigned		nreadylist;
@@ -556,6 +557,7 @@ struct septum {
 #define	SEPTUM_SESS		1
 #define	SEPTUM_PIPE		2
 #define	SEPTUM_FETCH		3
+#define	SEPTUM_READYPIPE	4
 	/*
 	 * `struct sess *arg' if TYPE is SEPTUM_SESS.
 	 * `struct pipe *arg' if TYPE is SEPTUM_PIPE.

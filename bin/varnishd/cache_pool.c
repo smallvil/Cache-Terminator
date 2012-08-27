@@ -55,6 +55,7 @@ SVNID("$Id: cache_pool.c 103 2011-04-12 06:54:31Z jwg286 $")
 #include <sys/times.h>
 
 #include <errno.h>
+#include <fcntl.h>
 #include <stdio.h>
 #include <math.h>
 #include <stdlib.h>
@@ -132,6 +133,8 @@ WRK_handlest(struct worker *w, struct septum *st)
 	struct fetch *fp;
 	struct pipe *dp;
 	struct sess *sp;
+	ssize_t l;
+	char m;
 
 	switch (st->type) {
 	case SEPTUM_SESS:
@@ -149,9 +152,41 @@ WRK_handlest(struct worker *w, struct septum *st)
 		AN(fp);
 		WRK_runsm_fetch(w, fp);
 		break;
+	case SEPTUM_READYPIPE:
+		l = read(w->readypipe[0], &m, sizeof(m));
+		if (l != sizeof(m))
+			VSL_stats->readypipe_readfail++;
+		break;
 	default:
 		assert(0 == 1);
 	}
+}
+
+/*--------------------------------------------------------------------*/
+
+static void
+wrk_readypipe_init(struct worker *w, struct septum *st)
+{
+	int i;
+
+	AZ(pipe(w->readypipe));
+
+	i = fcntl(w->readypipe[0], F_GETFL);
+	assert(i != -1);
+	i |= O_NONBLOCK;
+	i = fcntl(w->readypipe[0], F_SETFL, i);
+	assert(i != -1);
+	i = fcntl(w->readypipe[1], F_GETFL);
+	assert(i != -1);
+	i |= O_NONBLOCK;
+	i = fcntl(w->readypipe[1], F_SETFL, i);
+	assert(i != -1);
+
+	bzero(st, sizeof(*st));
+	st->type = SEPTUM_READYPIPE;
+	st->fd = w->readypipe[0];
+	st->events |= SEPTUM_WANT_READ;
+	SPT_EventAdd(w->fd, st);
 }
 
 /*--------------------------------------------------------------------*/
@@ -167,6 +202,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 	struct timespec tv;
 #endif
 	struct septum *st;
+	struct septum readyst;
 	struct worker *w, ww;
 	unsigned char wlog[shm_workspace];
 	int i, ms, n, stats_clean = 1;
@@ -189,6 +225,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 #endif
 	assert(w->fd >= 0);
 
+	wrk_readypipe_init(w, &readyst);
 	Lck_New(&w->readylist_mtx);
 	VTAILQ_INIT(&w->readylist);
 
@@ -235,7 +272,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 			}
 			n = kevent(w->fd, NULL, 0, ev, KQEVENT_MAX, &tv);
 #endif
-			for (ep = ev, i = 0; i < n; i++, ep++, w->nsocket--) {
+			for (ep = ev, i = 0; i < n; i++, ep++) {
 #if defined(HAVE_EPOLL_CTL)
 				st = (struct septum *)ep->data.ptr;
 #endif
@@ -247,8 +284,11 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 				 * clients are exited the state machine arming
 				 * the callout.  It's a assumption and design.
 				 */
-				callout_stop(w, &st->co);
-				SPT_EventDel(w->fd, st);
+				if (st->type != SEPTUM_READYPIPE) {
+					w->nsocket--;
+					callout_stop(w, &st->co);
+					SPT_EventDel(w->fd, st);
+				}
 				WRK_handlest(w, st);
 			}
 		}

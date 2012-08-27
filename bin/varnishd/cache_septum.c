@@ -56,6 +56,8 @@ SPT_Wakeup(struct worker *w, struct septum *st)
 #ifdef VARNISH_DEBUG
 	struct septum *entry;
 #endif
+	ssize_t l;
+	char m = 'R';
 
 	Lck_Lock(&w->readylist_mtx);
 #ifdef VARNISH_DEBUG
@@ -67,6 +69,10 @@ SPT_Wakeup(struct worker *w, struct septum *st)
 	VTAILQ_INSERT_TAIL(&w->readylist, st, list);
 	w->nreadylist++;
 	Lck_Unlock(&w->readylist_mtx);
+
+	l = write(w->readypipe[1], &m, sizeof(m));
+	if (l != sizeof(m))
+		VSL_stats->readypipe_writefail++;
 }
 
 void
