@@ -319,6 +319,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 	Lck_Unlock(&qp->mtx);
 
 	VSL(SLT_WorkThread, 0, "%p end", w);
+	AZ(close(w->fd));
 	AZ(pthread_cond_destroy(&w->cond));
 	HSH_Cleanup(w);
 	WRK_SumStat(w);
