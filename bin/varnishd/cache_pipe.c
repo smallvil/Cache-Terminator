@@ -152,9 +152,7 @@ pie_recv_frombackend(struct pipe *dp)
 	i = CFD_read(&vc->fds, dp->buf[1], dp->bufsize);
 	if (i == -2) {
 		SEPTUM_PIPEEVENT(dp, vc->vc_fd, vc->vc_want,
-		    (vc->vc_want == SEPTUM_WANT_READ) ?
-		    CALLOUT_SECTOTICKS(params->recv_timeout) :
-		    CALLOUT_SECTOTICKS(params->send_timeout));
+		    CALLOUT_SECTOTICKS(params->pipe_timeout));
 		return (PIPE_WAIT);
 	}
 	if (i <= 0) {

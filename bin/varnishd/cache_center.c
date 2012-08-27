@@ -454,8 +454,7 @@ cnt_tunnel_pipe_recv_fromclient(struct sess *sp)
 	i = read(sp->sp_fd, dp->buf[0], dp->bufsize);
 	if (i == -1 && errno == EAGAIN) {
 		SEPTUM_SESSEVENT(sp, sp->sp_fd,
-		    SEPTUM_WANT_READ,
-		    CALLOUT_SECTOTICKS(params->recv_timeout));
+		    SEPTUM_WANT_READ, CALLOUT_SECTOTICKS(params->pipe_timeout));
 		return (SESS_WAIT);
 	}
 	if (i == -1 || i == 0) {
@@ -1251,8 +1250,7 @@ cnt_socks_pipe_recv_fromclient(struct sess *sp)
 	i = read(sp->sp_fd, dp->buf[0], dp->bufsize);
 	if (i == -1 && errno == EAGAIN) {
 		SEPTUM_SESSEVENT(sp, sp->sp_fd,
-		    SEPTUM_WANT_READ,
-		    CALLOUT_SECTOTICKS(params->recv_timeout));
+		    SEPTUM_WANT_READ, CALLOUT_SECTOTICKS(params->pipe_timeout));
 		return (SESS_WAIT);
 	}
 	if (i == -1 || i == 0) {
@@ -3007,9 +3005,7 @@ cnt_http_pipe_recv_fromclient(struct sess *sp)
 	i = CFD_read(&sp->fds, dp->buf[0], dp->bufsize);
 	if (i == -2) {
 		SEPTUM_SESSEVENT(sp, sp->sp_fd, sp->sp_want,
-		    (sp->sp_want == SEPTUM_WANT_READ) ?
-		    CALLOUT_SECTOTICKS(params->recv_timeout) :
-		    CALLOUT_SECTOTICKS(params->send_timeout));
+		    CALLOUT_SECTOTICKS(params->pipe_timeout));
 		return (SESS_WAIT);
 	}
 	if (i <= 0) {
