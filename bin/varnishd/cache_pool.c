@@ -189,6 +189,15 @@ wrk_readypipe_init(struct worker *w, struct septum *st)
 	SPT_EventAdd(w->fd, st);
 }
 
+static void
+wrk_readypipe_fini(struct worker *w, struct septum *st)
+{
+
+	SPT_EventDel(w->fd, st);
+	AZ(close(w->readypipe[0]));
+	AZ(close(w->readypipe[1]));
+}
+
 /*--------------------------------------------------------------------*/
 
 static void *
@@ -347,6 +356,7 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 
 	VSL(SLT_WorkThread, 0, "%p end", w);
 	Lck_Delete(&w->readylist_mtx);
+	wrk_readypipe_fini(w, &readyst);
 	AZ(close(w->fd));
 	COT_fini(w);
 	AZ(pthread_cond_destroy(&w->cond));
