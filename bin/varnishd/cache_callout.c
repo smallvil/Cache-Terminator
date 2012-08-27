@@ -253,3 +253,11 @@ COT_init(struct worker *w)
 		VTAILQ_INIT(&cb->callwheel[i]);
 	}
 }
+
+void
+COT_fini(struct worker *w)
+{
+	struct callout_block *cb = &w->cb;
+
+	free(cb->callwheel);
+}

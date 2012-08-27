@@ -892,6 +892,7 @@ void BAN_Deref(struct ban **ban);
 /* cache_callout.c [COT] */
 #define	callout_stop(w, c)	_callout_stop_safe(w, c)
 void	COT_init(struct worker *);
+void	COT_fini(struct worker *);
 void	COT_clock(struct worker *);
 void	COT_ticks(struct worker *);
 void	callout_init(struct callout *, int);
