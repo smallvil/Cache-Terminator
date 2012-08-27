@@ -157,6 +157,7 @@ cnt_timeout(struct sess *sp)
 	struct http_conn *htc;
 	struct pipe *dp;
 	struct vbe_conn *vc;
+	double now;
 
 	sp->acct_tmp.sess_timeout++;
 
@@ -172,6 +173,12 @@ cnt_timeout(struct sess *sp)
 	case STP_HTTP_PIPE_RECV_FROMCLIENT:
 		CAST_PIPE_NOTNULL(dp, sp->vc, PIPE_MAGIC);
 		CAST_OBJ_NOTNULL(vc, &dp->vc, VBE_CONN_MAGIC);
+		/* Need to handle a edge case if only one direction is used. */
+		now = TIM_real();
+		if ((now - dp->t_updated) < (double)params->pipe_timeout) {
+			sp->step = prevstep;
+			return (SESS_CONTINUE);
+		}
 		dp->flags |= PIPE_F_SESSDONE;
 		if ((dp->flags & PIPE_F_PIPEDONE) != 0) {
 			sp->step = STP_HTTP_PIPE_CLOSEWAIT;
@@ -240,9 +247,15 @@ cnt_timeout(struct sess *sp)
 		sp->step = STP_SOCKSv5_ERROR;
 		return (SESS_CONTINUE);
 	case STP_SOCKS_PIPE_RECV_FROMCLIENT:
-		VSL_stats->socks_timeout++;
 		CAST_PIPE_NOTNULL(dp, sp->vc, PIPE_MAGIC);
 		CAST_OBJ_NOTNULL(vc, &dp->vc, VBE_CONN_MAGIC);
+		/* Need to handle a edge case if only one direction is used. */
+		now = TIM_real();
+		if ((now - dp->t_updated) < (double)params->pipe_timeout) {
+			sp->step = prevstep;
+			return (SESS_CONTINUE);
+		}
+		VSL_stats->socks_timeout++;
 		dp->flags |= PIPE_F_SESSDONE;
 		if ((dp->flags & PIPE_F_PIPEDONE) != 0) {
 			sp->step = STP_SOCKS_PIPE_END;
@@ -470,6 +483,7 @@ cnt_tunnel_pipe_recv_fromclient(struct sess *sp)
 	}
 	assert(i > 0);
 	dp->buflen[0] = i;
+	dp->t_updated = TIM_real();
 	sp->step = STP_TUNNEL_PIPE_SEND;
 	return (SESS_CONTINUE);
 }
@@ -1272,6 +1286,7 @@ cnt_socks_pipe_recv_fromclient(struct sess *sp)
 	}
 	assert(i > 0);
 	dp->buflen[0] = i;
+	dp->t_updated = TIM_real();
 	sp->step = STP_SOCKS_PIPE_SEND;
 	return (SESS_CONTINUE);
 }
@@ -3021,6 +3036,7 @@ cnt_http_pipe_recv_fromclient(struct sess *sp)
 	}
 	assert(i > 0);
 	dp->buflen[0] = i;
+	dp->t_updated = TIM_real();
 	sp->step = STP_HTTP_PIPE_SEND;
 	return (SESS_CONTINUE);
 }

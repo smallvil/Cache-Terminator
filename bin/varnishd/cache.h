@@ -788,6 +788,7 @@ struct pipe {
 #define	PIPE_F_PIPEDONE		0x4	/* vbe->fd --> sp->fd completed */
 	struct worker		*wrk;
 	struct sess		*sess;
+	enum pipestep		prevstep;
 	enum pipestep		step;
 #ifdef VARNISH_DEBUG
 	enum pipestep		stephist[STEPHIST_MAX];
@@ -803,6 +804,7 @@ struct pipe {
 	ssize_t			buflen[2];
 	ssize_t			bufoffset[2];
 	double			t_last;
+	double			t_updated;
 
 	char			addr[TCP_ADDRBUFSIZE];
 	char			port[TCP_PORTBUFSIZE];

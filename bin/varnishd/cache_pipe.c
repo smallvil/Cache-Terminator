@@ -73,6 +73,7 @@ PIE_SessionTimeout(void *arg)
 {
 	struct pipe *dp = arg;
 
+	dp->prevstep = dp->step;
 	dp->step = PIE_TIMEOUT;
 	pie_EventTimeout(dp);
 	PIE_EventDel(dp);
@@ -83,9 +84,23 @@ pie_timeout(struct pipe *dp)
 {
 	struct sess *sp;
 	struct vbe_conn *vc;
+	double now;
 
 	CAST_OBJ_NOTNULL(sp, dp->sess, SESS_MAGIC);
 	CAST_OBJ_NOTNULL(vc, sp->vc, VBE_CONN_MAGIC);
+
+	/* Need to handle a edge case if only one direction is used. */
+	switch (dp->prevstep) {
+	case PIE_RECV_FROMBACKEND:
+		now = TIM_real();
+		if ((now - dp->t_updated) < (double)params->pipe_timeout) {
+			dp->step = dp->prevstep;
+			return (PIPE_CONTINUE);
+		}
+		break;
+	default:
+		break;
+	}
 
 	sp->acct_tmp.sess_timeout++;
 	if ((sp->flags & SESS_T_SOCKS) != 0)
@@ -113,6 +128,7 @@ pie_first(struct pipe *dp)
 	CAST_OBJ_NOTNULL(vc, sp->vc, VBE_CONN_MAGIC);
 
 	dp->t_last = TIM_real();
+	dp->t_updated = dp->t_last;
 	TCP_hisname(vc->vc_fd, dp->addr, sizeof(dp->addr), dp->port,
 	    sizeof(dp->port));
 
@@ -173,6 +189,7 @@ pie_recv_frombackend(struct pipe *dp)
 	}
 	assert(i > 0);
 	dp->buflen[1] = i;
+	dp->t_updated = TIM_real();
 	dp->step = PIE_SEND;
 	return (PIPE_CONTINUE);
 }
