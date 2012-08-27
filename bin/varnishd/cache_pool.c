@@ -251,25 +251,12 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 			    w->nreadylist);
 		if (w->nsocket > 0) {
 #if defined(HAVE_EPOLL_CTL)
-			if (w->nwaiting == 0) {
-				VSL_stats->timeout_1000ms++;
-				ms = 1000;	/* ms */
-			} else {
-				VSL_stats->timeout_1ms++;
-				ms = 1;
-			}
+			ms = 1000;	/* ms */
 			n = epoll_wait(w->fd, ev, EPOLLEVENT_MAX, ms);
 #endif
 #if defined(HAVE_KQUEUE)
-			if (w->nwaiting == 0) {
-				VSL_stats->timeout_1000ms++;
-				tv.tv_sec = 1;
-				tv.tv_nsec = 0;
-			} else {
-				VSL_stats->timeout_1ms++;
-				tv.tv_sec = 0;
-				tv.tv_nsec = 1000000;	/* waits 1 milisecond */
-			}
+			tv.tv_sec = 1;
+			tv.tv_nsec = 0;
 			n = kevent(w->fd, NULL, 0, ev, KQEVENT_MAX, &tv);
 #endif
 			for (ep = ev, i = 0; i < n; i++, ep++) {

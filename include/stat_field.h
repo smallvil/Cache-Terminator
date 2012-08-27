@@ -190,9 +190,6 @@ MAC_STAT(range_single,		uint64_t, 0, 'a', "Single range byte")
 MAC_STAT(range_multi,		uint64_t, 0, 'a', "Multiple range bytes")
 MAC_STAT(range_badfmt,		uint64_t, 0, 'a', "Bad range format")
 
-MAC_STAT(timeout_1000ms,	uint64_t, 0, 'a', "1000 ms timeout")
-MAC_STAT(timeout_1ms,		uint64_t, 0, 'a', "1 ms timeout")
-
 MAC_STAT(readypipe_readfail,	uint64_t, 0, 'a', "read(2) failed to the readypipe")
 MAC_STAT(readypipe_writefail,	uint64_t, 0, 'a', "write(2) faileed to the readypipe")
 
