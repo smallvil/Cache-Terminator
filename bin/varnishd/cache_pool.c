@@ -212,47 +212,47 @@ wrk_thread_real(struct wq *qp, unsigned shm_workspace)
 			VSL(SLT_WorkThread, 0, "%p %d %d %d",
 			    (void *)pthread_self(), w->nsocket, w->nwaiting,
 			    w->nreadylist);
+		if (w->nsocket > 0) {
 #if defined(HAVE_EPOLL_CTL)
-		if (w->nsocket > 0 &&
-		    w->nwaiting == 0 &&
-		    w->nreadylist == 0) {
-			VSL_stats->timeout_1000ms++;
-			ms = 1000;	/* ms */
-		} else {
-			VSL_stats->timeout_1ms++;
-			ms = 1;
-		}
-		n = epoll_wait(w->fd, ev, EPOLLEVENT_MAX, ms);
+			if (w->nwaiting == 0 &&
+			    w->nreadylist == 0) {
+				VSL_stats->timeout_1000ms++;
+				ms = 1000;	/* ms */
+			} else {
+				VSL_stats->timeout_1ms++;
+				ms = 1;
+			}
+			n = epoll_wait(w->fd, ev, EPOLLEVENT_MAX, ms);
 #endif
 #if defined(HAVE_KQUEUE)
-		if (w->nsocket > 0 &&
-		    w->nwaiting == 0 &&
-		    w->nreadylist == 0) {
-			VSL_stats->timeout_1000ms++;
-			tv.tv_sec = 1;
-			tv.tv_nsec = 0;
-		} else {
-			VSL_stats->timeout_1ms++;
-			tv.tv_sec = 0;
-			tv.tv_nsec = 1000000;	/* waits 1 milisecond */
-		}
-		n = kevent(w->fd, NULL, 0, ev, KQEVENT_MAX, &tv);
+			if (w->nwaiting == 0 &&
+			    w->nreadylist == 0) {
+				VSL_stats->timeout_1000ms++;
+				tv.tv_sec = 1;
+				tv.tv_nsec = 0;
+			} else {
+				VSL_stats->timeout_1ms++;
+				tv.tv_sec = 0;
+				tv.tv_nsec = 1000000;	/* waits 1 milisecond */
+			}
+			n = kevent(w->fd, NULL, 0, ev, KQEVENT_MAX, &tv);
 #endif
-		for (ep = ev, i = 0; i < n; i++, ep++, w->nsocket--) {
+			for (ep = ev, i = 0; i < n; i++, ep++, w->nsocket--) {
 #if defined(HAVE_EPOLL_CTL)
-			st = (struct septum *)ep->data.ptr;
+				st = (struct septum *)ep->data.ptr;
 #endif
 #if defined(HAVE_KQUEUE)
-			st = (struct septum *)ep->udata;
+				st = (struct septum *)ep->udata;
 #endif
-			/*
-			 * stop callouts here because all sockets for clients
-			 * are exited the state machine arming the callout.
-			 * It's a assumption and design.
-			 */
-			callout_stop(w, &st->co);
-			SPT_EventDel(w->fd, st);
-			WRK_handlest(w, st);
+				/*
+				 * stop callouts here because all sockets for
+				 * clients are exited the state machine arming
+				 * the callout.  It's a assumption and design.
+				 */
+				callout_stop(w, &st->co);
+				SPT_EventDel(w->fd, st);
+				WRK_handlest(w, st);
+			}
 		}
 		/*
 		 * Process readylist which includes SEPTUM pointers waken.
