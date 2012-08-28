@@ -1,7 +1,7 @@
-/* f7d6db4 */
+/* bc3c27c */
 #include <libvarnish.h>
 const char* svn_version(void)
 {
-	const char* SVN_Version = "f7d6db4";
+	const char* SVN_Version = "bc3c27c";
 	return SVN_Version;
 }

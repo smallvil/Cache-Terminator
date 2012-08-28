@@ -173,7 +173,14 @@ cnt_timeout(struct sess *sp)
 	case STP_HTTP_PIPE_RECV_FROMCLIENT:
 		CAST_PIPE_NOTNULL(dp, sp->vc, PIPE_MAGIC);
 		CAST_OBJ_NOTNULL(vc, &dp->vc, VBE_CONN_MAGIC);
-		/* Need to handle a edge case if only one direction is used. */
+		/*
+		 * Need to handle a edge case if only one direction is used.
+		 * At current approach, for PIPE and real-time operations, two
+		 * elements (one struct sess * and one struct pipe *) are
+		 * involved that there're working independently.  Without this
+		 * patch, there's no way to let other side know whether this
+		 * side is alive.
+		 */
 		now = TIM_real();
 		if ((now - dp->t_updated) < (double)params->pipe_timeout) {
 			sp->step = prevstep;
