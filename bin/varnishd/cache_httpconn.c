@@ -227,6 +227,8 @@ HTC_Read(struct http_conn *htc, void *d, unsigned len)
 		htc->pipeline.b += l;
 		if (htc->pipeline.b == htc->pipeline.e)
 			htc->pipeline.b = htc->pipeline.e = NULL;
+		if (l > 0)
+			return (l);
 	}
 	if (len == 0)
 		return (l);
