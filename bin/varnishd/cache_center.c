@@ -3728,6 +3728,7 @@ CNT_Session(struct sess *sp)
 	    sp->step == STP_HTTP_FETCH_RESP_RECV_FIRSTBYTE ||
 	    sp->step == STP_HTTP_FETCH_RESP_RECV_NEXTBYTES ||
 	    sp->step == STP_HTTP_HIT_REQ_RECV ||
+	    sp->step == STP_HTTP_DELIVER_HDR ||
 	    sp->step == STP_HTTP_DELIVER_BODY_WAKEN ||
 	    sp->step == STP_HTTP_DELIVER_BODY_SEND ||
 	    sp->step == STP_HTTP_DELIVER_END ||
