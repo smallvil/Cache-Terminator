@@ -226,6 +226,14 @@ cnt_timeout(struct sess *sp)
 		SESS_ERROR(sp, 503, "fetch firstbyte timeout");
 		sp->step = STP_HTTP_FETCH_ERROR;
 		return (SESS_CONTINUE);
+	case STP_HTTP_FETCH_RESP_RECV_NEXTBYTES:
+		CAST_OBJ_NOTNULL(htc, sp->wrkvar.htc, HTTP_CONN_MAGIC);
+		WS_ReleaseP(htc->ws, htc->rxbuf.b);
+		VBE_CloseFd(sp, &sp->vc, 0);
+
+		SESS_ERROR(sp, 503, "fetch nextbyte error");
+		sp->step = STP_HTTP_FETCH_ERROR;
+		return (SESS_CONTINUE);
 	case STP_HTTP_DELIVER_BODY_SEND:
 		vca_close_session(sp, "send timeout");
 		sp->flags |= SESS_F_QUICKABORT;
